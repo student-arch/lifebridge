@@ -119,7 +119,7 @@ class SupportMatchesScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              const LbH1('Best matches for Arjun.'),
+              const LbH1('Best matches for Ramakrishna.'),
               const SizedBox(height: 8),
               LbBody('Sorted by relevance. Tap any program to see details.', color: LbColors.muted),
               const SizedBox(height: 16),
@@ -306,7 +306,7 @@ class WhyThisMatchScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reasons = const [
-      ('Matches your treatment type', 'Cardiac-specific fund. They focus on procedures like the one Arjun needs.'),
+      ('Matches your treatment type', 'Cardiac-specific fund. They focus on procedures like the one Ramakrishna needs.'),
       ('Income within their range', 'Household income ₹6.4L is below their ₹8L threshold.'),
       ('Verified by LifeBridge', 'We contacted Heart Care Trust on 12 March 2026 and confirmed active intake.'),
       ('Treatment date fits their window', 'Applications close 7 days before procedure. You have time.'),
@@ -421,7 +421,7 @@ class _EligibilityCheckScreenState extends State<EligibilityCheckScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Is the patient a resident of Karnataka?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, height: 1.3)),
+                    const Text('Is the patient a resident of Andhra Pradesh?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, height: 1.3)),
                     const SizedBox(height: 16),
                     for (int i = 0; i < 3; i++) ...[
                       LbChoice(
@@ -552,7 +552,7 @@ class EligibilityResultScreen extends StatelessWidget {
               LbCard(
                 child: Column(
                   children: const [
-                    _ResultRow(text: 'Resident of Karnataka', warn: false),
+                    _ResultRow(text: 'Resident of Andhra Pradesh', warn: false),
                     Divider(color: LbColors.borderSoft, height: 1),
                     _ResultRow(text: 'Cardiac procedure planned', warn: false),
                     Divider(color: LbColors.borderSoft, height: 1),
@@ -762,7 +762,7 @@ class SupportSourceVerificationScreen extends StatelessWidget {
                     SizedBox(height: 6),
                     Text('12 March 2026 by LifeBridge Trust Team', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                     SizedBox(height: 4),
-                    Text('Phone: +91 80 4112 9087 · Email: contact@heartcaretrust.org', style: TextStyle(fontSize: 12, color: LbColors.muted)),
+                    Text('Phone: +91 8816 129 087 · Email: contact@heartcaretrust.org', style: TextStyle(fontSize: 12, color: LbColors.muted)),
                   ],
                 ),
               ),

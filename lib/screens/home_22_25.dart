@@ -114,6 +114,15 @@ class _Greeting extends StatelessWidget {
   }
 }
 
+class _UserGreeting extends StatelessWidget {
+  const _UserGreeting();
+  @override
+  Widget build(BuildContext context) {
+    final first = AppScope.read(context).user.name.split(' ').first;
+    return LbH1('Hi, $first.');
+  }
+}
+
 class _HeroCaseCard extends StatelessWidget {
   const _HeroCaseCard();
   @override
@@ -312,7 +321,7 @@ Color _appBg(String name) {
 }
 
 String _appSubtitle(dynamic app) {
-  if (app.programName.contains('Hospital')) return 'Apollo Hospitals · Updated 2h ago';
+  if (app.programName.contains('Hospital')) return 'Godavari Hospitals · Updated 2h ago';
   if (app.programName.contains('Trust')) return 'Seva Trust · 1 document missing';
   return 'Awaiting department response';
 }
@@ -491,7 +500,7 @@ class HomeEmptyScreen extends StatelessWidget {
             children: [
               const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: LbMeta('TUESDAY · 22 APRIL')),
               const SizedBox(height: 8),
-              const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: LbH1('Hi, Priya.')),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: const _UserGreeting()),
               const SizedBox(height: 16),
               LbCard(
                 padding: const EdgeInsets.all(22),
@@ -590,7 +599,7 @@ class HomeActiveScreen extends StatelessWidget {
             children: [
               const Padding(padding: EdgeInsets.symmetric(horizontal: 0), child: LbMeta('TUESDAY · 22 APRIL')),
               const SizedBox(height: 8),
-              const LbH1('Hi, Priya.'),
+              const _UserGreeting(),
               const SizedBox(height: 16),
               LbCard(
                 child: Column(
@@ -664,7 +673,7 @@ class HomeActiveScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Apply to Apollo Charity Care', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                              Text('Apply to Godavari Charity Care', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                               SizedBox(height: 2),
                               Text('88% match · ₹4.8L potential benefit', style: TextStyle(fontSize: 12, color: LbColors.muted)),
                             ],
@@ -756,7 +765,7 @@ class HomeAttentionScreen extends StatelessWidget {
             children: [
               const Padding(padding: EdgeInsets.symmetric(horizontal: 0), child: Text('TUESDAY · 22 APRIL', style: TextStyle(color: LbColors.danger, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.4))),
               const SizedBox(height: 8),
-              const LbH1('Hi, Priya.'),
+              const _UserGreeting(),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(18),

@@ -2,24 +2,24 @@ import '../models/models.dart';
 
 class MockData {
   static User currentUser = const User(
-    name: 'Priya Rao',
-    email: 'priya.rao@example.com',
+    name: 'Saikumar',
+    email: 'admin@saikumar.link',
     phone: '+91 98 7654 3210',
     dob: '14 March 1986',
     gender: 'Female',
     occupation: 'Teacher',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    pincode: '560 034',
+    city: 'Bhimavaram',
+    state: 'Andhra Pradesh',
+    pincode: '534 201',
     role: 'Caregiver / Family',
     income: 640000,
   );
 
   static Patient patient = const Patient(
-    name: 'Arjun Rao',
+    name: 'Ramakrishna',
     age: 41,
     gender: 'Male',
-    relationship: 'Spouse',
+    relationship: 'Uncle',
     concern: 'Cardiac — angiogram scheduled',
     occupation: 'Self-employed · Mechanic',
     maritalStatus: 'Married',
@@ -32,15 +32,15 @@ class MockData {
     diagnosis: 'Triple-vessel coronary artery disease',
     estimatedCost: 480000,
     startDate: _d(2026, 5, 2),
-    doctorName: 'Dr. Kavita Menon',
+    doctorName: 'Dr. Kavitha Reddy',
     notes: 'Awaiting insurance pre-authorization.',
   );
 
   static HospitalDetails hospital = const HospitalDetails(
-    name: 'Apollo Hospitals, Bannerghatta',
-    city: 'Bengaluru',
+    name: 'Bhimavaram General Hospital',
+    city: 'Bhimavaram',
     department: 'Cardiology',
-    patientId: 'APH-234-1983',
+    patientId: 'BGH-234-1983',
   );
 
   static FinancialInfo financial = const FinancialInfo(
@@ -80,7 +80,7 @@ class MockData {
   static List<CaseDocument> documents = [
     CaseDocument(
       id: 'd1',
-      name: 'Aadhaar card · Arjun',
+      name: 'Aadhaar card · Ramakrishna',
       category: 'ID',
       categoryLabel: 'ID proof',
       fileType: 'PDF',
@@ -121,7 +121,7 @@ class MockData {
   static CaseEntity mainCase = CaseEntity(
     id: 'c1',
     title: 'Cardiac Treatment Assistance',
-    patientName: 'Arjun Rao',
+    patientName: 'Ramakrishna',
     startedAt: _d(2026, 4, 12),
     types: const [
       CaseType.treatmentFunding,
@@ -143,9 +143,9 @@ class MockData {
     const SupportProgram(
       id: 'p1',
       name: 'Heart Care Trust',
-      organization: 'Cardiac-specific trust · Bengaluru',
+      organization: 'Cardiac-specific trust · Bhimavaram',
       category: 'NGO',
-      description: 'Provides direct financial assistance for cardiac procedures at partner hospitals in Karnataka. Open to families earning below ₹8 LPA.',
+      description: 'Provides direct financial assistance for cardiac procedures at partner hospitals in Andhra Pradesh. Open to families earning below ₹8 LPA.',
       amount: 150000,
       amountLabel: 'Up to ₹1,50,000',
       matchPercent: 92,
@@ -157,18 +157,18 @@ class MockData {
       eligibility: [
         'Cardiac procedure planned or scheduled',
         'Annual income < ₹8,00,000',
-        'Karnataka resident',
+        'Andhra Pradesh resident',
         '3 documents required (see list)',
       ],
-      phone: '+91 80 4112 9087',
+      phone: '+91 8816 129 087',
       email: 'contact@heartcaretrust.org',
-      location: 'Bengaluru, KA',
-      whyMatch: 'Cardiac-specific fund. They focus on procedures like the one Arjun needs.',
+      location: 'Bhimavaram, AP',
+      whyMatch: 'Cardiac-specific fund. They focus on procedures like the one Ramakrishna needs.',
     ),
     const SupportProgram(
       id: 'p2',
-      name: 'Apollo Charity Care',
-      organization: 'Apollo Hospitals · in-network',
+      name: 'Godavari Charity Care',
+      organization: 'Godavari Hospitals · in-network',
       category: 'Hospital',
       description: '30–60% off billed cost for families below income threshold.',
       amount: 480000,
@@ -179,14 +179,14 @@ class MockData {
       verified: true,
       verifiedDate: '12 March 2026',
       eligibility: [
-        'Procedure at Apollo Hospitals',
+        'Procedure at Bhimavaram General Hospital',
         'Annual income < ₹6,00,000',
         'Charity-care interview required',
         '2 documents required (see list)',
       ],
-      phone: '+91 80 4040 1060',
-      email: 'charity@apollohospitals.com',
-      location: 'Bengaluru, KA',
+      phone: '+91 8816 401 060',
+      email: 'charity@godavarihospitals.org',
+      location: 'Bhimavaram, AP',
     ),
     const SupportProgram(
       id: 'p3',
@@ -204,16 +204,16 @@ class MockData {
       eligibility: [
         'Family-focused cases',
         'Annual income < ₹5,00,000',
-        'Resident of Karnataka',
+        'Resident of Andhra Pradesh',
       ],
-      phone: '+91 80 4092 7771',
+      phone: '+91 8816 927 771',
       email: 'contact@sevacommunity.org',
-      location: 'Bengaluru, KA',
+      location: 'Bhimavaram, AP',
     ),
     const SupportProgram(
       id: 'p4',
       name: 'State Treatment Scheme',
-      organization: 'Karnataka Health Department',
+      organization: 'Andhra Pradesh Health Department',
       category: 'Government',
       description: 'Up to ₹1,00,000 · longer review (6–8 weeks).',
       amount: 100000,
@@ -224,13 +224,13 @@ class MockData {
       verified: true,
       verifiedDate: '12 March 2026',
       eligibility: [
-        'Karnataka resident',
+        'Andhra Pradesh resident',
         'BPL or low-income family',
         'Government hospital procedure',
       ],
-      phone: '080-22032000',
-      email: 'sts@karnataka.gov.in',
-      location: 'Karnataka',
+      phone: '0866-2482000',
+      email: 'sts@ap.gov.in',
+      location: 'Andhra Pradesh',
     ),
     const SupportProgram(
       id: 'p5',
@@ -249,9 +249,9 @@ class MockData {
         'Out-of-town treatment',
         'Family accompanies patient',
       ],
-      phone: '+91 80 4112 9090',
+      phone: '+91 8816 129 090',
       email: 'help@childrensaid.org',
-      location: 'Bengaluru, KA',
+      location: 'Bhimavaram, AP',
     ),
   ];
 
@@ -279,7 +279,7 @@ class MockData {
       name: 'Manipal Hospital Aid',
       organization: 'Hospital-based · 5 locations',
       category: 'Hospital',
-      description: '30–50% off · Network includes Apollo',
+      description: '30–50% off · Network includes Godavari Hospitals',
       amount: 240000,
       amountLabel: '30–50% off',
       matchPercent: 84,
@@ -288,9 +288,9 @@ class MockData {
       verified: true,
       verifiedDate: '18 April 2026',
       eligibility: ['Network hospitals', 'Below income threshold'],
-      phone: '+91 80 4040 1061',
+      phone: '+91 866 241 061',
       email: 'aid@manipal.com',
-      location: 'Bengaluru, KA',
+      location: 'Vijayawada, AP',
     ),
     const SupportProgram(
       id: 'p8',
@@ -305,10 +305,10 @@ class MockData {
       documentsNeeded: 2,
       verified: true,
       verifiedDate: '18 April 2026',
-      eligibility: ['Family support focus', 'Karnataka residents'],
-      phone: '+91 80 4112 9091',
+      eligibility: ['Family support focus', 'Andhra Pradesh residents'],
+      phone: '+91 8816 129 091',
       email: 'care@caringhands.org',
-      location: 'Bengaluru, KA',
+      location: 'Bhimavaram, AP',
     ),
     const SupportProgram(
       id: 'p9',
@@ -324,9 +324,9 @@ class MockData {
       verified: true,
       verifiedDate: '18 April 2026',
       eligibility: ['Cardiac patient', 'Prescription on file'],
-      phone: '+91 80 4112 9092',
+      phone: '+91 8816 129 092',
       email: 'subsidy@medorg.org',
-      location: 'Bengaluru, KA',
+      location: 'Bhimavaram, AP',
     ),
   ];
 
@@ -378,12 +378,12 @@ class MockData {
       status: 'Overdue',
       statusVariant: BadgeVariant.rejected,
       daysSince: 9,
-      lastMessage: "Dear Seva Community Fund team, I'm following up on behalf of Priya Rao regarding application SCF-2026-0183...",
+      lastMessage: "Dear Seva Community Fund team, I'm following up on behalf of Saikumar regarding application SCF-2026-0183...",
       isOverdue: true,
     ),
     FollowUp(
       id: 'f2',
-      programName: 'Apollo Charity Care',
+      programName: 'Godavari Charity Care',
       programId: 'p2',
       reference: '',
       status: 'Due in 3d',
@@ -402,7 +402,7 @@ class MockData {
       statusVariant: BadgeVariant.submitted,
       daysSince: 0,
       sentAt: _d(2026, 4, 22),
-      lastMessage: "Dear Seva Community Fund team, I'm following up on behalf of Priya Rao...",
+      lastMessage: "Dear Seva Community Fund team, I'm following up on behalf of Saikumar...",
     ),
     FollowUp(
       id: 'fh2',
@@ -491,11 +491,11 @@ class MockData {
 
   static List<AINeed> aiNeeds = const [
     AINeed('Hospital financial assistance',
-        "Apollo Hospitals has a charity-care program that can reduce cardiac procedure costs by 30–60%.", 'home'),
+        "Godavari Hospitals has a charity-care program that can reduce cardiac procedure costs by 30–60%.", 'home'),
     AINeed('Treatment funding',
         'Estimated ₹2.8L gap after insurance and savings.', 'card'),
     AINeed('Community medical support',
-        'Two local NGOs in Bengaluru specifically fund cardiac care.', 'plus_circle'),
+        'Two local NGOs in Bhimavaram specifically fund cardiac care.', 'plus_circle'),
     AINeed('Travel & accommodation',
         'Hospital partner offers subsidized stay for patient families during procedure.', 'plus'),
   ];
@@ -553,19 +553,19 @@ class MockData {
 
   static String followUpDraft(String programName, String reference) {
     return "Dear $programName team,\n\n"
-        "I'm following up on behalf of Priya Rao regarding application $reference, "
-        "submitted on 13 April 2026 for assistance with her husband Arjun's cardiac procedure "
-        "at Apollo Hospitals, Bannerghatta. We understand you're reviewing many requests, "
+        "I'm following up on behalf of Saikumar regarding application $reference, "
+        "submitted on 13 April 2026 for assistance with my uncle Ramakrishna's cardiac procedure "
+        "at Bhimavaram General Hospital, Bhimavaram. We understand you're reviewing many requests, "
         "and we appreciate the time you're taking.\n\n"
         "We wanted to check whether any additional information would be helpful, and confirm "
         "that the procedure is scheduled for 2 May 2026. Please let us know if we can provide "
         "anything further.\n\n"
-        "With gratitude,\nPriya Rao (caregiver for Arjun Rao)";
+        "With gratitude,\nSaikumar (caregiver for Ramakrishna)";
   }
 
   static String personalStatementDraft() {
-    return "I am writing to request financial assistance for my husband Arjun, who has been diagnosed with triple-vessel coronary artery disease. He is 41 and has been the sole earner for our family of four.\n\n"
-        "The recommended procedure — cardiac catheterization with angioplasty — is scheduled for 2 May at Apollo Hospitals, Bannerghatta. The estimated cost is ₹4,80,000. Our insurance pre-authorization covers only ₹1,50,000, and we have ₹50,000 in savings.\n\n"
+    return "I am writing to request financial assistance for my uncle Ramakrishna, who has been diagnosed with triple-vessel coronary artery disease. He is 41.\n\n"
+        "The recommended procedure — cardiac catheterization with angioplasty — is scheduled for 2 May at Bhimavaram General Hospital, Bhimavaram. The estimated cost is ₹4,80,000. Our insurance pre-authorization covers only ₹1,50,000, and we have ₹50,000 in savings.\n\n"
         "Any support you can offer would help us bridge the remaining gap… We are grateful for your consideration.";
   }
 }

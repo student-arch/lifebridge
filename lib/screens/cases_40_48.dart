@@ -169,7 +169,7 @@ class CaseOverviewScreen extends StatelessWidget {
                     SizedBox(height: 8),
                     LbKeyValue(label: 'PROCEDURE', value: 'Cardiac catheterization + angioplasty'),
                     LbKeyValue(label: 'DIAGNOSIS', value: 'Triple-vessel CAD'),
-                    LbKeyValue(label: 'HOSPITAL', value: 'Apollo, Bannerghatta'),
+                    LbKeyValue(label: 'HOSPITAL', value: 'Bhimavaram General Hospital'),
                     LbKeyValue(label: 'START DATE', value: '2 May 2026'),
                   ],
                 ),

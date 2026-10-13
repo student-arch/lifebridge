@@ -26,7 +26,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _tabInit = false;
 
   // Log-in fields.
-  final _loginId = TextEditingController(text: 'arjun.rao@example.com');
+  final _loginId = TextEditingController(text: 'admin@saikumar.link');
   final _loginPass = TextEditingController(text: '••••••••••');
   bool _remember = true;
 
@@ -165,9 +165,9 @@ class _AuthScreenState extends State<AuthScreen> {
 
   List<Widget> _signupBody(BuildContext context) {
     return [
-      LbField(label: 'Full name', hint: 'e.g. Priya Rao', controller: _name, autofocus: true),
+      LbField(label: 'Full name', hint: 'e.g. Saikumar', controller: _name, autofocus: true),
       const SizedBox(height: 16),
-      LbField(label: 'Email or phone', hint: 'e.g. priya.rao@example.com', controller: _signupId, keyboardType: TextInputType.emailAddress),
+      LbField(label: 'Email or phone', hint: 'e.g. admin@saikumar.link', controller: _signupId, keyboardType: TextInputType.emailAddress),
       const SizedBox(height: 16),
       LbField(label: 'Password', hint: 'At least 10 characters with a number', controller: _signupPass, obscure: true),
       const SizedBox(height: 16),

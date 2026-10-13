@@ -164,8 +164,14 @@ class AiService {
       }
     }
 
+    dynamic decoded;
     try {
-      final text = _extractText(root ?? jsonDecode(res.body));
+      decoded = jsonDecode(res.body);
+    } catch (_) {
+      throw AiException('The AI returned a response this app could not understand. Try again. (Server said: ${_preview(res.body)})');
+    }
+    try {
+      final text = _extractText(root ?? decoded);
       if (text.trim().isEmpty) {
         throw const AiException('The AI returned an empty reply. Try again — rephrasing sometimes helps.');
       }

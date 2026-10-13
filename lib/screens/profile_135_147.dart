@@ -106,6 +106,7 @@ class ProfileScreen extends StatelessWidget {
 
 String _stateAbbrev(String s) {
   switch (s) {
+    case 'Andhra Pradesh': return 'AP';
     case 'Karnataka': return 'KA';
     default: return s;
   }
@@ -212,7 +213,7 @@ class SettingsScreen extends StatelessWidget {
                     LbListRow(
                       icon: Icons.smart_toy_outlined,
                       title: 'AI assistant',
-                      subtitle: s.aiConfigured ? 'Model · ${s.aiModel}' : 'Not configured',
+                      subtitle: s.aiConfigured ? 'Your key · ${s.effectiveAiModel}' : 'Not configured',
                       onTap: () => Navigator.pushNamed(context, '/settings/ai'),
                     ),
                   ],
@@ -451,10 +452,10 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                 LbBody('Tap a model to select it, then save below. All AI features use the saved model.', color: LbColors.muted, size: 12),
               ],
               const SizedBox(height: 16),
-              LbField(label: 'API key', hint: 'Stored only on this device', controller: _key, obscure: true),
+              LbField(label: 'API key', hint: 'Required — paste your key here', controller: _key, obscure: true),
               const SizedBox(height: 16),
               LbInfoBanner(
-                title: s.aiConfigured ? 'Status: configured (model · ${s.aiModel}).' : 'Status: not configured.',
+                title: s.aiConfigured ? 'Status: configured · model ${s.effectiveAiModel}.' : 'Status: not configured — enter your key above.',
                 body: 'Your key stays on this phone and is sent only to the base URL above. It is never shown, logged, or shared.',
                 background: LbColors.infoBg,
                 borderColor: LbColors.cardWarnBorder,
@@ -674,7 +675,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                         children: [
                           Text('This iPhone 15 Pro', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                           SizedBox(height: 2),
-                          Text('iOS 18 · Bengaluru · Active now', style: TextStyle(fontSize: 12, color: LbColors.muted)),
+                          Text('iOS 18 · Bhimavaram · Active now', style: TextStyle(fontSize: 12, color: LbColors.muted)),
                         ],
                       ),
                     ),
@@ -878,7 +879,7 @@ class ConnectedOrgsScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
-                          Text('Apollo Charity Care', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                          Text('Godavari Charity Care', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                           SizedBox(height: 2),
                           Text('Apply to share your data with them', style: TextStyle(fontSize: 12, color: LbColors.muted)),
                         ],

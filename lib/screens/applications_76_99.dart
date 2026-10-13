@@ -325,7 +325,7 @@ class _AIDraftScreenState extends State<AIDraftScreen> {
               LbCard(
                 child: Column(
                   children: const [
-                    _KVRow(label: 'PATIENT NAME', value: 'Arjun Rao'),
+                    _KVRow(label: 'PATIENT NAME', value: 'Ramakrishna'),
                     Divider(color: LbColors.borderSoft, height: 1),
                     _KVRow(label: 'AGE', value: '41'),
                     Divider(color: LbColors.borderSoft, height: 1),
@@ -340,7 +340,7 @@ class _AIDraftScreenState extends State<AIDraftScreen> {
                   children: const [
                     _KVRow(label: 'PROCEDURE', value: 'Cardiac catheterization + angioplasty'),
                     Divider(color: LbColors.borderSoft, height: 1),
-                    _KVRow(label: 'HOSPITAL', value: 'Apollo, Bannerghatta'),
+                    _KVRow(label: 'HOSPITAL', value: 'Bhimavaram General Hospital'),
                     Divider(color: LbColors.borderSoft, height: 1),
                     _KVRow(label: 'EST. COST', value: '₹4,80,000', number: true),
                   ],
@@ -1838,7 +1838,7 @@ class AppUnderReviewScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    LbBullet(items: ['Apply to Apollo Charity Care (88% match)', 'Confirm insurance pre-authorization', 'Keep documents up to date']),
+                    LbBullet(items: ['Apply to Godavari Charity Care (88% match)', 'Confirm insurance pre-authorization', 'Keep documents up to date']),
                   ],
                 ),
               ),

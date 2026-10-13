@@ -87,8 +87,8 @@ class UserTypeScreen extends StatefulWidget {
 
 class _UserTypeScreenState extends State<UserTypeScreen> {
   int _selected = 1;
-  final _nameC = TextEditingController(text: 'Arjun Rao');
-  final _relC = TextEditingController(text: 'Spouse');
+  final _nameC = TextEditingController(text: 'Ramakrishna');
+  final _relC = TextEditingController(text: 'Uncle');
   @override
   void dispose() {
     _nameC.dispose();

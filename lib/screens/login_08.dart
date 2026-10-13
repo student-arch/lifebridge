@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               LbBody('Continue where you left off.', color: LbColors.fg2),
               const SizedBox(height: 32),
-              const LbField(label: 'Email or phone', value: 'arjun.rao@example.com'),
+              const LbField(label: 'Email or phone', value: 'admin@saikumar.link'),
               const SizedBox(height: 16),
               const LbField(label: 'Password', value: '••••••••••', obscure: true),
               const SizedBox(height: 12),

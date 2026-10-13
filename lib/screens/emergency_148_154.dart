@@ -210,7 +210,7 @@ class HospitalAssistanceScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Apollo Hospitals, Bannerghatta', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                          Text('Bhimavaram General Hospital', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                           SizedBox(height: 2),
                           Text('Your treatment hospital', style: TextStyle(fontSize: 12, color: LbColors.muted)),
                         ],
@@ -234,7 +234,7 @@ class HospitalAssistanceScreen extends StatelessWidget {
                             SizedBox(height: 8),
                             Text('Call billing', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                             SizedBox(height: 2),
-                            Text('+91 80 4040 1060', style: TextStyle(fontSize: 12, color: LbColors.muted)),
+                            Text('+91 8816 401 060', style: TextStyle(fontSize: 12, color: LbColors.muted)),
                           ],
                         ),
                       ),
@@ -531,7 +531,7 @@ class EmergencyContactsScreen extends StatelessWidget {
               const SizedBox(height: 16),
               const LbEyebrow('YOUR HOSPITAL'),
               const SizedBox(height: 8),
-              _ContactRow(name: 'Apollo Hospitals, Bannerghatta', subtitle: '+91 80 4040 1060 · ER & billing', phone: 'tel:08040401060', showChevron: true),
+              _ContactRow(name: 'Bhimavaram General Hospital', subtitle: '+91 8816 401 060 · ER & billing', phone: 'tel:08816401060', showChevron: true),
               const SizedBox(height: 8),
               _ContactRow(name: '108 — Ambulance', subtitle: 'Free · 24/7', phone: 'tel:108', icon: Icons.swap_horiz, showChevron: true),
               const SizedBox(height: 24),
@@ -602,7 +602,7 @@ class EmergencyConfirmScreen extends StatelessWidget {
               const SizedBox(height: 24),
               const LbH1('Action confirmed.', align: TextAlign.center),
               const SizedBox(height: 8),
-              LbBody("Calling Apollo Hospitals billing now.", color: LbColors.muted, align: TextAlign.center),
+              LbBody("Calling Bhimavaram General Hospital billing now.", color: LbColors.muted, align: TextAlign.center),
               const SizedBox(height: 24),
               LbCard(
                 child: Column(

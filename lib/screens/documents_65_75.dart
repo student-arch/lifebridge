@@ -23,7 +23,7 @@ class DocumentCenterScreen extends StatelessWidget {
               const SizedBox(height: 8),
               const LbH1('Document center'),
               const SizedBox(height: 8),
-              LbBody("Organized for Arjun's cardiac case.", color: LbColors.muted),
+              LbBody("Organized for Ramakrishna's cardiac case.", color: LbColors.muted),
               const SizedBox(height: 16),
               LbButton(
                 label: 'Upload a document',
@@ -810,7 +810,7 @@ class DocumentAddedScreen extends StatelessWidget {
               const SizedBox(height: 24),
               const LbH1('Document added.', align: TextAlign.center),
               const SizedBox(height: 8),
-              LbBody("Income certificate is now in Arjun's case.", color: LbColors.muted, align: TextAlign.center),
+              LbBody("Income certificate is now in Ramakrishna's case.", color: LbColors.muted, align: TextAlign.center),
               const SizedBox(height: 24),
               LbCard(
                 child: Row(

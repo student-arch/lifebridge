@@ -24,17 +24,32 @@ void main() {
   });
 
   group('AI settings state', () {
-    test('starts unconfigured and reports honestly', () {
+    test('fresh state uses OpenRouter base/model defaults, key empty until entered', () {
       final s = AppState();
+      expect(s.effectiveAiBaseUrl, 'https://openrouter.ai/api/v1');
+      expect(s.effectiveAiApiKey, isEmpty);
       expect(s.aiConfigured, isFalse);
-      expect(
-        () => s.askAi(task: 't', messages: const []),
-        throwsA(isA<Exception>().having(
-          (e) => '$e',
-          'message',
-          contains('not configured'),
-        )),
+    });
+
+    test('asking without a key fails honestly before any network', () async {
+      final s = AppState();
+      await expectLater(
+        s.askAi(task: 't', messages: const [AiChatMessage(role: 'user', content: 'hi')]),
+        throwsA(isA<AiException>().having((e) => e.message, 'message', contains('not configured'))),
       );
+    });
+
+    test('asking with a saved key reaches the endpoint', () async {
+      final s = AppState();
+      await s.saveAiSettings(baseUrl: 'https://example.com/v1', apiKey: 'sk-test', model: 'm');
+      var calledUrl = '';
+      final client = MockClient((req) async {
+        calledUrl = req.url.toString();
+        return http.Response('{"choices":[{"message":{"content":"ok"}}]}', 200);
+      });
+      final out = await s.askAi(task: 't', messages: const [AiChatMessage(role: 'user', content: 'hi')], client: client);
+      expect(out, 'ok');
+      expect(calledUrl, startsWith('https://example.com/v1/chat/completions'));
     });
 
     test('saveAiSettings flips configured and persists', () async {
@@ -59,11 +74,13 @@ void main() {
       expect(ctx, contains('₹'));
     });
 
-    test('askAiJson reports unconfigured without network', () {
+    test('askAiJson surfaces endpoint failures honestly', () async {
       final s = AppState();
-      expect(
-        s.askAiJson(task: 't', userContent: 'u'),
-        throwsA(isA<AiException>().having((e) => e.message, 'message', contains('not configured'))),
+      await s.saveAiSettings(baseUrl: 'https://example.com/v1', apiKey: 'sk-test', model: 'm');
+      final client = MockClient((_) async => http.Response('not json at all', 200));
+      await expectLater(
+        s.askAiJson(task: 't', userContent: 'u', client: client),
+        throwsA(isA<AiException>().having((e) => e.message, 'message', contains('could not understand'))),
       );
     });
 
@@ -116,26 +133,28 @@ void main() {
     });
   });
 
-  group('AI chat (unconfigured backend)', () {
-    testWidgets('fetch without key shows validation error, no fake list', (tester) async {
+  group('AI settings model fetch (unreachable server)', () {
+    testWidgets('fetch shows error, no fake list', (tester) async {
       final s = AppState();
       await tester.pumpWidget(_wrap(s, const AiSettingsScreen()));
       await tester.pump();
+      await tester.enterText(find.byType(TextField).at(0), 'http://127.0.0.1:9');
+      await tester.enterText(find.byType(TextField).at(2), 'sk-test-unreachable');
       await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -300));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Fetch available models').first, warnIfMissed: false);
       await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 5));
       await tester.pump();
       expect(find.text('Could not fetch models'), findsOneWidget);
-      expect(find.textContaining('base URL and API key'), findsOneWidget);
-      // No model selected itself and nothing persisted.
-      expect(s.aiConfigured, isFalse);
       expect(tester.takeException(), isNull);
     });
+  });
 
-    testWidgets('sending shows the honest not-configured error, no fake answer', (tester) async {
-      final s = AppState(); // no API key
+  group('AI chat (unreachable backend)', () {
+    testWidgets('sending shows the honest connection error, no fake answer', (tester) async {
+      final s = AppState();
+      await s.saveAiSettings(baseUrl: 'notaurl', apiKey: 'sk-test-unreachable', model: 'm');
       await tester.pumpWidget(_wrap(s, const AIChatScreen()));
       await tester.pump();
       expect(find.textContaining('LifeBridge AI'), findsWidgets);
@@ -144,10 +163,10 @@ void main() {
       await tester.tap(find.text('Send'));
       await tester.pump(); // user bubble + spinner
       expect(find.text('What should I do next?'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 1)); // failed request resolves
+      await tester.pump(const Duration(seconds: 5)); // failed request resolves
       await tester.pump();
       expect(find.text('Something went wrong'), findsOneWidget);
-      expect(find.textContaining('not configured'), findsOneWidget);
+      expect(find.textContaining('looks invalid'), findsOneWidget);
     });
   });
 }

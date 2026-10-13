@@ -54,11 +54,23 @@ class AppState extends ChangeNotifier {
   // --- AI backend configuration (Profile > Settings > AI assistant) ---
   // OpenAI-compatible: base URL + API key + model name. Read at call time
   // so switching models takes effect on the very next request.
-  String aiBaseUrl = 'https://api.openai.com/v1';
-  String aiApiKey = '';
-  String aiModel = 'gpt-4o-mini';
+  //
+  // No key is bundled: the user enters a personal key once in the app and it
+  // persists on-device. (A hardcoded key would ship inside the APK and the
+  // git history, and secret scanners rightly block it.)
+  static const String defaultAiBaseUrl = 'https://openrouter.ai/api/v1';
+  static const String defaultAiModel = 'openrouter/free';
 
-  bool get aiConfigured => aiApiKey.trim().isNotEmpty;
+  String aiBaseUrl = defaultAiBaseUrl;
+  String aiApiKey = '';
+  String aiModel = defaultAiModel;
+
+  /// The values actually sent with requests.
+  String get effectiveAiBaseUrl => aiBaseUrl.trim().isEmpty ? defaultAiBaseUrl : aiBaseUrl.trim();
+  String get effectiveAiApiKey => aiApiKey.trim();
+  String get effectiveAiModel => aiModel.trim().isEmpty ? defaultAiModel : aiModel.trim();
+
+  bool get aiConfigured => effectiveAiApiKey.isNotEmpty;
 
   Future<void> loadAiSettings() async {
     try {
@@ -136,25 +148,23 @@ Documents on file: $docs.
     int keepLastMessages = 10,
     http.Client? client,
   }) {
-    if (!aiConfigured) {
-      throw const AiException('AI is not configured yet. Add your API key in Profile > Settings > AI assistant.');
-    }
-    // Sliding window: the UI keeps full history, but only the tail is sent,
-    // so long conversations stop blowing the model's context limit.
-    var history = messages;
-    if (history.length > keepLastMessages) {
-      history = history.sublist(history.length - keepLastMessages);
-    }
     return AiService.chat(
-      baseUrl: aiBaseUrl,
-      apiKey: aiApiKey,
-      model: aiModel,
-      messages: [AiChatMessage(role: 'system', content: aiSystemPrompt(task)), ...history],
+      baseUrl: effectiveAiBaseUrl,
+      apiKey: effectiveAiApiKey,
+      model: effectiveAiModel,
+      messages: [AiChatMessage(role: 'system', content: aiSystemPrompt(task)), ..._tail(messages, keepLastMessages)],
       temperature: temperature,
       maxTokens: maxTokens,
       jsonMode: jsonMode,
       client: client,
     );
+  }
+
+  // Sliding window: the UI keeps full history, but only the tail is sent,
+  // so long conversations stop blowing the model's context limit.
+  static List<AiChatMessage> _tail(List<AiChatMessage> messages, int keep) {
+    if (messages.length <= keep) return messages;
+    return messages.sublist(messages.length - keep);
   }
 
   /// Structured-output variant of [askAi] for the analysis/extraction screens.
@@ -165,6 +175,7 @@ Documents on file: $docs.
     required String task,
     required String userContent,
     int maxTokens = 2200,
+    http.Client? client,
   }) async {
     Future<Map<String, dynamic>?> attempt(String content) async {
       final raw = await askAi(
@@ -173,6 +184,7 @@ Documents on file: $docs.
         temperature: 0.1,
         maxTokens: maxTokens,
         jsonMode: true,
+        client: client,
       );
       return AiService.parseJsonObject(raw);
     }

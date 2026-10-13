@@ -37,7 +37,7 @@ class AIAssistantHomeScreen extends StatelessWidget {
               const SizedBox(height: 12),
               const LbAIBubble(
                 title: 'LifeBridge AI',
-                message: "Hi Priya. I can answer questions about Arjun's case, explain recommendations, and help you decide what to do next. What would you like to know?",
+                message: "Hi Saikumar. I can answer questions about Ramakrishna's case, explain recommendations, and help you decide what to do next. What would you like to know?",
               ),
               const SizedBox(height: 20),
               const LbEyebrow('QUICK QUESTIONS'),
@@ -65,7 +65,7 @@ class AIAssistantHomeScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    Text('"What happens if Apollo rejects us?"', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    Text('"What happens if Godavari rejects us?"', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                     SizedBox(height: 4),
                     Text('2 days ago', style: TextStyle(fontSize: 12, color: LbColors.muted)),
                   ],
@@ -743,9 +743,9 @@ class AICantDetermineScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Call Apollo billing office', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                          Text('Call hospital billing office', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                           SizedBox(height: 2),
-                          Text('+91 80 4040 1060 · Mon–Sat 9–5', style: TextStyle(fontSize: 12, color: LbColors.muted)),
+                          Text('+91 8816 401 060 · Mon–Sat 9–5', style: TextStyle(fontSize: 12, color: LbColors.muted)),
                         ],
                       ),
                     ),
@@ -856,7 +856,7 @@ class HumanEscalationScreen extends StatelessWidget {
                         children: [
                           Text('Phone', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                           SizedBox(height: 2),
-                          Text('+91 80 4567 8900 · free call', style: TextStyle(fontSize: 12, color: LbColors.muted)),
+                          Text('+91 8816 578 900 · free call', style: TextStyle(fontSize: 12, color: LbColors.muted)),
                         ],
                       ),
                     ),

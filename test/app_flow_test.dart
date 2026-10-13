@@ -14,6 +14,13 @@ Widget _wrap(AppState s, Widget child) {
   return AppScope(state: s, child: MaterialApp(home: Scaffold(body: child)));
 }
 
+Future<AppState> _offlineState() async {
+  final s = AppState();
+  // Malformed URL: fails deterministically before any network access.
+  await s.saveAiSettings(baseUrl: 'notaurl', apiKey: 'sk-test-unreachable', model: 'm');
+  return s;
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -40,7 +47,7 @@ void main() {
 
   group('AI screens with unconfigured backend (no network)', () {
     testWidgets('analysis shows honest error with retry', (tester) async {
-      await tester.pumpWidget(_wrap(AppState(), const AIAnalysisScreen()));
+      await tester.pumpWidget(_wrap(await _offlineState(), const AIAnalysisScreen()));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
@@ -73,28 +80,28 @@ void main() {
     });
 
     testWidgets('application draft shows honest error with retry', (tester) async {
-      await tester.pumpWidget(_wrap(AppState(), const AIDraftScreen()));
+      await tester.pumpWidget(_wrap(await _offlineState(), const AIDraftScreen()));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
       expect(find.text('Draft is ready.'), findsOneWidget);
-      expect(find.textContaining('not configured'), findsOneWidget);
+      expect(find.textContaining('looks invalid'), findsOneWidget);
       expect(find.text('Try again'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('follow-up draft shows honest error with retry', (tester) async {
-      await tester.pumpWidget(_wrap(AppState(), const AIFollowUpDraftScreen()));
+      await tester.pumpWidget(_wrap(await _offlineState(), const AIFollowUpDraftScreen()));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
-      expect(find.textContaining('not configured'), findsOneWidget);
+      expect(find.textContaining('looks invalid'), findsOneWidget);
       expect(find.text('Try again'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('extraction shows honest error with retry', (tester) async {
-      await tester.pumpWidget(_wrap(AppState(), const AIDocumentExtractionScreen()));
+      await tester.pumpWidget(_wrap(await _offlineState(), const AIDocumentExtractionScreen()));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
