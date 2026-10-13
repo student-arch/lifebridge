@@ -89,17 +89,17 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-    subgraph App["LifeBridgeApp (main.dart)"]
-        MS["MaterialApp<br/>initialRoute: '/'"]
+    subgraph App["LifeBridgeApp · main.dart"]
+        MS["MaterialApp<br/>initialRoute /"]
     end
-    subgraph State["State (state/app_state.dart)"]
-        AS["AppState : ChangeNotifier<br/>auth · case data · prefs · AI settings"]
+    subgraph State["State · state/app_state.dart"]
+        AS["AppState ChangeNotifier<br/>auth · case data · prefs · AI settings"]
     end
-    subgraph Nav["Routing (router.dart · 165 routes)"]
-        R["AppRouter.onGenerateRoute<br/>string → screen map"]
-        SH["MainShell (shell.dart)<br/>5-tab IndexedStack + auth guard"]
+    subgraph Nav["Routing · router.dart · 165 routes"]
+        R["AppRouter.onGenerateRoute<br/>string to screen map"]
+        SH["MainShell · shell.dart<br/>5-tab IndexedStack + auth guard"]
     end
-    subgraph UI["UI (screens/ + widgets/components.dart)"]
+    subgraph UI["UI · screens + widgets/components.dart"]
         SCR["19 screen files · 40+ Lb widgets<br/>LbScaffold LbCard LbButton LbField LbChoice …"]
     end
     subgraph Data["Data"]
@@ -127,9 +127,9 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    S["/ Splash<br/>(animated, ~1.5s)"] --> A["/auth AuthScreen<br/>Log in / Sign up tabs"]
+    S["/ Splash<br/>animated ~1.5s"] --> A["/auth AuthScreen<br/>Log in / Sign up tabs"]
     A -->|Log in| H["/home dashboard"]
-    A -->|Create account<br/>(name + contact + password)| H
+    A -->|Create account<br/>name + contact + password| H
     H --> P["Later, when needed:<br/>Profile › Edit · Settings · case flow"]
 ```
 
