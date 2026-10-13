@@ -1,9 +1,18 @@
-import '../../data/mock_data.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/theme/theme.dart';
 import '../../state/app_state.dart';
+import '../../services/ai_service.dart';
 import '../../widgets/components.dart';
+
+/// Safe JSON readers for AI-generated analysis maps.
+String _jstr(Map m, String key) => m[key] is String ? (m[key] as String) : '';
+int _jint(Map m, String key) => m[key] is int ? (m[key] as int) : 0;
+List<Map<String, dynamic>> _jlist(Map m, String key) {
+  final v = m[key];
+  if (v is! List) return const [];
+  return [for (final e in v) if (e is Map<String, dynamic>) e];
+}
 
 class AIAnalysisScreen extends StatefulWidget {
   const AIAnalysisScreen({super.key});
@@ -12,16 +21,83 @@ class AIAnalysisScreen extends StatefulWidget {
 }
 
 class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
+  bool _started = false;
+  String? _error;
+
   @override
-  void initState() {
-    super.initState();
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) Navigator.pushReplacementNamed(context, '/ai/results');
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    _run();
+  }
+
+  Future<void> _run() async {
+    final s = AppScope.read(context);
+    try {
+      final analysis = await s.askAiJson(
+        task: 'Analyze this patient-assistance case for support-program matching. '
+            'Reply with ONLY valid JSON shaped exactly like: '
+            '{"summary":"2-3 sentence plain-language summary","matchedPrograms":<int>,"possibleAid":"e.g. ₹3.2L",'
+            '"needs":[{"title":...,"description":...}] (3-5 items),'
+            '"missingDocs":<int>,"missingDocsDetail":"...",'
+            '"nextAction":{"title":...,"detail":...},'
+            '"docPlan":[{"name":...,"meta":...,"uploaded":bool}] (3-5 items),'
+            '"steps":[{"title":...,"description":...}] (3-4 items)}. '
+            'Ground every number in the case data. Never invent approvals, deadlines, or program decisions.',
+        userContent: 'Analyze my case and return the JSON matching plan.',
+      );
+      if (!mounted) return;
+      if (_jstr(analysis, 'summary').isEmpty) {
+        setState(() => _error = 'The AI returned a response this app could not understand. Try again.');
+        return;
+      }
+      Navigator.pushReplacementNamed(context, '/ai/results', arguments: {'analysis': analysis});
+    } on AiException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'Something went wrong reaching the AI. Check your connection and settings, then try again.');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: LbColors.bg,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(color: LbColors.accentSoft, shape: BoxShape.circle),
+                  alignment: Alignment.center,
+                  child: const LbSpinner(size: 40, color: LbColors.accent),
+                ),
+                const SizedBox(height: 16),
+                const LbH1('Analysis hit a snag.', align: TextAlign.center),
+                const SizedBox(height: 8),
+                LbAIBubble(title: 'Something went wrong', message: _error!),
+                const SizedBox(height: 16),
+                LbButton(label: 'Try again', onTap: () {
+                  setState(() => _error = null);
+                  _started = false;
+                  _run();
+                }),
+                const SizedBox(height: 8),
+                LbButton(label: 'Go back', variant: LbButtonVariant.secondary, onTap: () => Navigator.pop(context)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
@@ -40,7 +116,7 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
               const SizedBox(height: 24),
               const LbH1('Analyzing your case…', align: TextAlign.center),
               const SizedBox(height: 8),
-              LbBody("We're comparing your situation with 124 verified programs.", color: LbColors.muted, align: TextAlign.center),
+              LbBody("Your AI model is comparing the case with available programs.", color: LbColors.muted, align: TextAlign.center),
               const SizedBox(height: 32),
               LbCard(
                 child: Column(
@@ -61,7 +137,7 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
                 child: LbBody("AI assists with suggestions. You stay in control.", color: LbColors.muted, size: 12, align: TextAlign.center),
               ),
               const SizedBox(height: 16),
-              LbButton(label: 'View analysis', onTap: () => Navigator.pushReplacementNamed(context, '/ai/results')),
+              LbButton(label: 'Cancel', variant: LbButtonVariant.secondary, onTap: () => Navigator.pop(context)),
             ],
           ),
         ),
@@ -74,6 +150,44 @@ class AIResultsScreen extends StatelessWidget {
   const AIResultsScreen({super.key});
   @override
   Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final analysis = args is Map && args['analysis'] is Map<String, dynamic>
+        ? args['analysis'] as Map<String, dynamic>
+        : null;
+    if (analysis == null || _jstr(analysis, 'summary').isEmpty) {
+      return Scaffold(
+        backgroundColor: LbColors.bg,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    LbCircleButton(icon: Icons.chevron_left, size: 44, background: LbColors.surface, foreground: LbColors.fg, onTap: () => Navigator.pop(context)),
+                    const SizedBox(width: 12),
+                    const LbEyebrow('ANALYSIS'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const LbAIBubble(
+                  title: 'No analysis yet',
+                  message: 'Run a fresh analysis first — results appear here.',
+                ),
+                const SizedBox(height: 16),
+                LbButton(label: 'Run analysis', onTap: () => Navigator.pushReplacementNamed(context, '/ai/analysis')),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    final needs = _jlist(analysis, 'needs');
+    final next = analysis['nextAction'] is Map<String, dynamic> ? analysis['nextAction'] as Map<String, dynamic> : <String, dynamic>{};
+    final matched = _jint(analysis, 'matchedPrograms');
+    final aid = _jstr(analysis, 'possibleAid');
+    final missing = _jint(analysis, 'missingDocs');
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
@@ -90,16 +204,16 @@ class AIResultsScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              const LbAIBubble(
+              LbAIBubble(
                 title: 'LifeBridge AI',
-                message: "Here's what I found for Arjun's case.\n\nBased on the treatment plan, income, and location you shared. I picked the most likely matches — not a guarantee.",
+                message: _jstr(analysis, 'summary'),
               ),
               const SizedBox(height: 16),
               Row(
-                children: const [
-                  Expanded(child: LbStatCard(label: 'PROGRAMS', value: '5', caption: 'matched')),
-                  SizedBox(width: 12),
-                  Expanded(child: LbStatCard(label: 'POSSIBLE', value: '₹3.2L', caption: 'in aid')),
+                children: [
+                  Expanded(child: LbStatCard(label: 'PROGRAMS', value: matched > 0 ? '$matched' : '–', caption: 'matched')),
+                  const SizedBox(width: 12),
+                  Expanded(child: LbStatCard(label: 'POSSIBLE', value: aid.isEmpty ? '–' : aid, caption: 'in aid')),
                 ],
               ),
               const SizedBox(height: 16),
@@ -108,19 +222,18 @@ class AIResultsScreen extends StatelessWidget {
               LbCard(
                 padding: EdgeInsets.zero,
                 child: Column(
-                  children: const [
-                    _NeedRow(title: 'Hospital financial assistance'),
-                    Divider(color: LbColors.borderSoft, height: 1),
-                    _NeedRow(title: 'Treatment funding gap'),
-                    Divider(color: LbColors.borderSoft, height: 1),
-                    _NeedRow(title: 'Community medical support'),
+                  children: [
+                    for (int i = 0; i < needs.length; i++) ...[
+                      if (i > 0) const Divider(color: LbColors.borderSoft, height: 1),
+                      _NeedRow(title: _jstr(needs[i], 'title').isEmpty ? 'Need ${i + 1}' : _jstr(needs[i], 'title'), analysis: analysis),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(height: 16),
               LbInfoBanner(
                 title: 'Missing information.',
-                body: '2 documents would unlock more matches.',
+                body: missing > 0 ? '$missing document${missing == 1 ? '' : 's'} would unlock more matches. ${_jstr(analysis, 'missingDocsDetail')}' : 'Your documents look complete for now.',
                 background: LbColors.warnBg,
                 borderColor: Colors.transparent,
                 icon: Icons.warning_amber_outlined,
@@ -131,14 +244,14 @@ class AIResultsScreen extends StatelessWidget {
               LbCard(
                 background: LbColors.infoBg,
                 borderColor: LbColors.cardWarnBorder,
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    LbEyebrow('NEXT BEST ACTION'),
-                    SizedBox(height: 6),
-                    Text('Upload income certificate', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                    SizedBox(height: 4),
-                    Text('3 of 5 matches require proof of income. Adding it now could double your eligible support.', style: TextStyle(fontSize: 12, color: LbColors.fg2, height: 1.4)),
+                    const LbEyebrow('NEXT BEST ACTION'),
+                    const SizedBox(height: 6),
+                    Text(_jstr(next, 'title').isEmpty ? 'Review the plan below' : _jstr(next, 'title'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text(_jstr(next, 'detail'), style: const TextStyle(fontSize: 12, color: LbColors.fg2, height: 1.4)),
                   ],
                 ),
               ),
@@ -156,11 +269,12 @@ class AIResultsScreen extends StatelessWidget {
 
 class _NeedRow extends StatelessWidget {
   final String title;
-  const _NeedRow({required this.title});
+  final Map<String, dynamic> analysis;
+  const _NeedRow({required this.title, this.analysis = const {}});
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/ai/needs'),
+      onTap: () => Navigator.pushNamed(context, '/ai/needs', arguments: {'analysis': analysis}),
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -180,6 +294,40 @@ class AINeedsScreen extends StatelessWidget {
   const AINeedsScreen({super.key});
   @override
   Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final analysis = args is Map && args['analysis'] is Map<String, dynamic>
+        ? args['analysis'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    final list = _jlist(analysis, 'needs');
+    if (list.isEmpty) {
+      return Scaffold(
+        backgroundColor: LbColors.bg,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    LbCircleButton(icon: Icons.chevron_left, size: 44, background: LbColors.surface, foreground: LbColors.fg, onTap: () => Navigator.pop(context)),
+                    const SizedBox(width: 12),
+                    const LbEyebrow('NEEDS'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const LbAIBubble(
+                  title: 'No needs identified yet',
+                  message: 'Run a fresh analysis first — identified needs appear here.',
+                ),
+                const SizedBox(height: 16),
+                LbButton(label: 'Run analysis', onTap: () => Navigator.pushReplacementNamed(context, '/ai/analysis')),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
@@ -203,30 +351,20 @@ class AINeedsScreen extends StatelessWidget {
               LbCard(
                 child: Column(
                   children: [
-                    for (int i = 0; i < MockData.aiNeeds.length; i++) ...[
+                    for (int i = 0; i < list.length; i++) ...[
                       if (i > 0) const Divider(color: LbColors.borderSoft, height: 1),
-                      _NeedDetailRow(icon: _iconFor(MockData.aiNeeds[i].icon), title: MockData.aiNeeds[i].title, description: MockData.aiNeeds[i].description),
+                      _NeedDetailRow(icon: Icons.circle_outlined, title: _jstr(list[i], 'title').isEmpty ? 'Need ${i + 1}' : _jstr(list[i], 'title'), description: _jstr(list[i], 'description')),
                     ],
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              LbButton(label: 'See recommended programs', onTap: () => Navigator.pushNamed(context, '/ai/recommended-support')),
+              LbButton(label: 'See recommended programs', onTap: () => Navigator.pushNamed(context, '/ai/recommended-support', arguments: {'analysis': analysis})),
             ],
           ),
         ),
       ),
     );
-  }
-
-  IconData _iconFor(String name) {
-    switch (name) {
-      case 'home': return Icons.home_outlined;
-      case 'card': return Icons.credit_card;
-      case 'plus_circle': return Icons.add_circle_outline;
-      case 'plus': return Icons.add;
-      default: return Icons.circle_outlined;
-    }
   }
 }
 
@@ -265,6 +403,10 @@ class AIRecommendedSupportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = AppScope.read(context);
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final analysis = args is Map && args['analysis'] is Map<String, dynamic>
+        ? args['analysis'] as Map<String, dynamic>
+        : const <String, dynamic>{};
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
@@ -307,7 +449,7 @@ class AIRecommendedSupportScreen extends StatelessWidget {
                 const SizedBox(height: 8),
               ],
               const SizedBox(height: 16),
-              LbButton(label: 'Continue', onTap: () => Navigator.pushNamed(context, '/ai/recommended-docs')),
+              LbButton(label: 'Continue', onTap: () => Navigator.pushNamed(context, '/ai/recommended-docs', arguments: {'analysis': analysis})),
               const SizedBox(height: 8),
               Center(
                 child: GestureDetector(
@@ -327,6 +469,40 @@ class AIRecommendedDocsScreen extends StatelessWidget {
   const AIRecommendedDocsScreen({super.key});
   @override
   Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final analysis = args is Map && args['analysis'] is Map<String, dynamic>
+        ? args['analysis'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    final docs = _jlist(analysis, 'docPlan');
+    if (docs.isEmpty) {
+      return Scaffold(
+        backgroundColor: LbColors.bg,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    LbCircleButton(icon: Icons.chevron_left, size: 44, background: LbColors.surface, foreground: LbColors.fg, onTap: () => Navigator.pop(context)),
+                    const SizedBox(width: 12),
+                    const LbEyebrow('DOCUMENT PLAN'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const LbAIBubble(
+                  title: 'No document plan yet',
+                  message: 'Run a fresh analysis first — the document plan appears here.',
+                ),
+                const SizedBox(height: 16),
+                LbButton(label: 'Run analysis', onTap: () => Navigator.pushReplacementNamed(context, '/ai/analysis')),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
@@ -347,7 +523,7 @@ class AIRecommendedDocsScreen extends StatelessWidget {
               const SizedBox(height: 8),
               LbBody('Each one is asked for by at least one program you matched.', color: LbColors.muted),
               const SizedBox(height: 16),
-              for (final d in MockData.aiRecommendedDocs) ...[
+              for (final d in docs) ...[
                 _DocPlanRow(doc: d),
                 const SizedBox(height: 8),
               ],
@@ -356,7 +532,7 @@ class AIRecommendedDocsScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Center(
                 child: GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, '/ai/next-steps'),
+                  onTap: () => Navigator.pushNamed(context, '/ai/next-steps', arguments: {'analysis': analysis}),
                   child: const Text('See recommended next steps', style: TextStyle(fontSize: 13, color: LbColors.accent, fontWeight: FontWeight.w600)),
                 ),
               ),
@@ -369,10 +545,13 @@ class AIRecommendedDocsScreen extends StatelessWidget {
 }
 
 class _DocPlanRow extends StatelessWidget {
-  final dynamic doc;
+  final Map<String, dynamic> doc;
   const _DocPlanRow({required this.doc});
   @override
   Widget build(BuildContext context) {
+    final uploaded = doc['uploaded'] == true;
+    final name = _jstr(doc, 'name').isEmpty ? 'Document' : _jstr(doc, 'name');
+    final meta = _jstr(doc, 'meta');
     return LbCard(
       child: Row(
         children: [
@@ -380,13 +559,13 @@ class _DocPlanRow extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: doc.uploaded ? LbColors.successBg : LbColors.warnBg,
+              color: uploaded ? LbColors.successBg : LbColors.warnBg,
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
             child: Icon(
-              doc.uploaded ? Icons.check : Icons.description_outlined,
-              color: doc.uploaded ? LbColors.emerald : LbColors.warn,
+              uploaded ? Icons.check : Icons.description_outlined,
+              color: uploaded ? LbColors.emerald : LbColors.warn,
               size: 20,
             ),
           ),
@@ -395,16 +574,18 @@ class _DocPlanRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(doc.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 2),
-                Text(
-                  doc.meta,
-                  style: TextStyle(fontSize: 12, color: doc.uploaded ? LbColors.emerald : LbColors.muted),
-                ),
+                Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                if (meta.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    meta,
+                    style: TextStyle(fontSize: 12, color: uploaded ? LbColors.emerald : LbColors.muted),
+                  ),
+                ],
               ],
             ),
           ),
-          if (!doc.uploaded)
+          if (!uploaded)
             GestureDetector(
               onTap: () => Navigator.pushNamed(context, '/docs/upload'),
               child: const Text('Upload →', style: TextStyle(fontSize: 13, color: LbColors.fg, fontWeight: FontWeight.w600)),
@@ -419,12 +600,40 @@ class AINextStepsScreen extends StatelessWidget {
   const AINextStepsScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    final steps = const [
-      ('Upload income certificate', 'Likely unlocks 3 additional programs. Highest-impact next move.'),
-      ('Apply to Heart Care Trust', "Highest match score. I'll prepare the draft when you're ready."),
-      ('Confirm insurance pre-auth', 'Call Star Health · approval may reduce your funding gap.'),
-      ('Prepare Apollo Charity Care application', 'Hospital-side discount; needs cost breakdown doc.'),
-    ];
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final analysis = args is Map && args['analysis'] is Map<String, dynamic>
+        ? args['analysis'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    final steps = _jlist(analysis, 'steps');
+    if (steps.isEmpty) {
+      return Scaffold(
+        backgroundColor: LbColors.bg,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    LbCircleButton(icon: Icons.chevron_left, size: 44, background: LbColors.surface, foreground: LbColors.fg, onTap: () => Navigator.pop(context)),
+                    const SizedBox(width: 12),
+                    const LbEyebrow('SUGGESTED PLAN'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const LbAIBubble(
+                  title: 'No plan yet',
+                  message: 'Run a fresh analysis first — the suggested plan appears here.',
+                ),
+                const SizedBox(height: 16),
+                LbButton(label: 'Run analysis', onTap: () => Navigator.pushReplacementNamed(context, '/ai/analysis')),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
@@ -450,7 +659,7 @@ class AINextStepsScreen extends StatelessWidget {
                   children: [
                     for (int i = 0; i < steps.length; i++) ...[
                       if (i > 0) const Divider(color: LbColors.borderSoft, height: 1),
-                      _StepRow(n: i + 1, title: steps[i].$1, description: steps[i].$2, muted: i == 3),
+                      _StepRow(n: i + 1, title: _jstr(steps[i], 'title').isEmpty ? 'Step ${i + 1}' : _jstr(steps[i], 'title'), description: _jstr(steps[i], 'description'), muted: i == steps.length - 1),
                     ],
                   ],
                 ),

@@ -181,6 +181,7 @@ class AppRouter {
     '/profile/view': (_) => const ProfileScreen(),
     '/profile/edit': (_) => const EditProfileScreen(),
     '/settings': (_) => const SettingsScreen(),
+    '/settings/ai': (_) => const AiSettingsScreen(),
     '/settings/notifications': (_) => const NotificationPrefsScreen(),
     '/settings/privacy': (_) => const PrivacyScreen(),
     '/settings/data-sharing': (_) => const DataSharingScreen(),

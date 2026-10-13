@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/mock_data.dart';
 import '../models/models.dart';
+import '../services/ai_service.dart';
 
 class AppState extends ChangeNotifier {
   bool signedIn = false;
@@ -47,6 +50,140 @@ class AppState extends ChangeNotifier {
   bool calendarSync = false;
   String quietFrom = '22:00';
   String quietTo = '07:00';
+
+  // --- AI backend configuration (Profile > Settings > AI assistant) ---
+  // OpenAI-compatible: base URL + API key + model name. Read at call time
+  // so switching models takes effect on the very next request.
+  String aiBaseUrl = 'https://api.openai.com/v1';
+  String aiApiKey = '';
+  String aiModel = 'gpt-4o-mini';
+
+  bool get aiConfigured => aiApiKey.trim().isNotEmpty;
+
+  Future<void> loadAiSettings() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      aiBaseUrl = p.getString('ai_base_url') ?? aiBaseUrl;
+      aiApiKey = p.getString('ai_api_key') ?? '';
+      aiModel = p.getString('ai_model') ?? aiModel;
+    } catch (_) {
+      // Storage unavailable: keep in-memory defaults.
+    }
+    notifyListeners();
+  }
+
+  Future<void> saveAiSettings({required String baseUrl, required String apiKey, required String model}) async {
+    aiBaseUrl = baseUrl.trim();
+    aiApiKey = apiKey.trim();
+    aiModel = model.trim();
+    notifyListeners();
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setString('ai_base_url', aiBaseUrl);
+      await p.setString('ai_api_key', aiApiKey);
+      await p.setString('ai_model', aiModel);
+    } catch (_) {
+      // Storage unavailable: settings still apply for this session.
+    }
+  }
+
+  /// Compact, non-sensitive case summary injected into AI system prompts so
+  /// answers are grounded in the user's actual application data.
+  String aiCaseContext() {
+    final programs = supportPrograms.take(5).map((p) => '${p.name} (${p.organization}, ${p.amountLabel}, ${p.matchPercent}% match)').join('; ');
+    final docs = documents.take(6).map((d) => d.name).join(', ');
+    return '''
+User: ${user.name} (${user.email}, ${user.phone}), ${user.city}, ${user.state}.
+Patient: ${patient.name}, age ${patient.age}, ${patient.gender}.
+Case: ${mainCase.title}. Treatment: ${treatment.type} (${treatment.diagnosis}) at ${hospital.name}; est. cost ${_inr(treatment.estimatedCost)}; funding gap ${_inr(mainCase.fundingGap)}.
+Household income: ${_inr(financial.annualIncome)}; insurance: ${insurance.provider} (${insurance.status}).
+Top programs: $programs.
+Documents on file: $docs.
+''';
+  }
+
+  static String _inr(double v) {
+    final n = v.round();
+    final s = n.toString();
+    final buf = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      final fromRight = s.length - i;
+      buf.write(s[i]);
+      if (fromRight > 1 && (fromRight == 4 || (fromRight > 4 && (fromRight - 4) % 2 == 1))) buf.write(',');
+    }
+    return '₹$buf';
+  }
+
+  String aiSystemPrompt(String role) {
+    return 'You are LifeBridge AI, a compassionate patient-assistance helper inside the LifeBridge app. '
+        'Answer concisely in plain language (no markdown tables). Never invent program decisions, approvals, or deadlines; '
+        'say when something needs confirmation from the program. Do not give medical advice beyond general information. '
+        'SCOPE: only answer questions related to this app — patient assistance, support programs, cases, applications, '
+        'documents, follow-ups, and using LifeBridge itself. If the user asks about anything else, politely decline in '
+        'one sentence and redirect them to what you can help with in the app. '
+        'User context:\n${aiCaseContext()}\nTask: $role';
+  }
+
+  /// Single entry point for AI text generation. Throws [AiException] with a
+  /// user-facing message when unconfigured or when the request fails — callers
+  /// must surface it, never silently fall back to static text.
+  Future<String> askAi({
+    required String task,
+    required List<AiChatMessage> messages,
+    double temperature = 0.4,
+    int maxTokens = 900,
+    bool jsonMode = false,
+    int keepLastMessages = 10,
+    http.Client? client,
+  }) {
+    if (!aiConfigured) {
+      throw const AiException('AI is not configured yet. Add your API key in Profile > Settings > AI assistant.');
+    }
+    // Sliding window: the UI keeps full history, but only the tail is sent,
+    // so long conversations stop blowing the model's context limit.
+    var history = messages;
+    if (history.length > keepLastMessages) {
+      history = history.sublist(history.length - keepLastMessages);
+    }
+    return AiService.chat(
+      baseUrl: aiBaseUrl,
+      apiKey: aiApiKey,
+      model: aiModel,
+      messages: [AiChatMessage(role: 'system', content: aiSystemPrompt(task)), ...history],
+      temperature: temperature,
+      maxTokens: maxTokens,
+      jsonMode: jsonMode,
+      client: client,
+    );
+  }
+
+  /// Structured-output variant of [askAi] for the analysis/extraction screens.
+  /// Uses JSON mode, a low temperature, and a generous token budget; if the
+  /// first reply still is not parseable JSON, it makes ONE more genuine
+  /// request asking for clean JSON before giving up with an honest error.
+  Future<Map<String, dynamic>> askAiJson({
+    required String task,
+    required String userContent,
+    int maxTokens = 2200,
+  }) async {
+    Future<Map<String, dynamic>?> attempt(String content) async {
+      final raw = await askAi(
+        task: task,
+        messages: [AiChatMessage(role: 'user', content: content)],
+        temperature: 0.1,
+        maxTokens: maxTokens,
+        jsonMode: true,
+      );
+      return AiService.parseJsonObject(raw);
+    }
+
+    var parsed = await attempt(userContent);
+    parsed ??= await attempt(
+      '$userContent\n\nIMPORTANT: your previous reply was not valid JSON. Reply now with ONLY the JSON object — no markdown fences, no prose, no commentary.',
+    );
+    if (parsed != null) return parsed;
+    throw const AiException('The AI returned a response this app could not understand. Try again.');
+  }
 
   void signIn() {
     signedIn = true;

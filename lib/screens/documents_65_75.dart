@@ -2,6 +2,7 @@ import '../../models/models.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/theme.dart';
 import '../../state/app_state.dart';
+import '../../services/ai_service.dart';
 import '../../widgets/components.dart';
 
 class DocumentCenterScreen extends StatelessWidget {
@@ -561,12 +562,44 @@ class AIDocumentExtractionScreen extends StatefulWidget {
 }
 
 class _AIDocumentExtractionScreenState extends State<AIDocumentExtractionScreen> {
+  bool _started = false;
+  String? _error;
+
   @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) Navigator.pushReplacementNamed(context, '/docs/review-extraction');
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    _run();
+  }
+
+  Future<void> _run() async {
+    final s = AppScope.read(context);
+    try {
+      final doc = s.documents.isNotEmpty ? s.documents.first : null;
+      final extraction = await s.askAiJson(
+        task: 'Propose the field-review checklist for the uploaded document described below.',
+        userContent: 'Uploaded document: "${doc?.name ?? 'document'}"'
+            '${doc != null ? ' (${doc.categoryLabel}, ${doc.size})' : ''}. '
+            'Propose the field checklist for reviewing it. Reply with ONLY valid JSON shaped exactly like: '
+            '{"docName":"...","confidence":"e.g. 92%","fields":[{"label":"...","value":"...","confidence":"e.g. 95%"}] (3-5 items),"note":"... or empty"}. '
+            'Fill "value" ONLY from the case data; use "" when unknown and set its confidence low. '
+            'Never invent ID numbers, dates, amounts, or authority names.',
+        maxTokens: 1000,
+      );
+      if (!mounted) return;
+      if (extraction['fields'] is! List) {
+        setState(() => _error = 'The AI returned a response this app could not understand. Try again.');
+        return;
+      }
+      Navigator.pushReplacementNamed(context, '/docs/review-extraction', arguments: {'extraction': extraction});
+    } on AiException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'Something went wrong reaching the AI. Check your connection and settings, then try again.');
+    }
   }
 
   @override
@@ -596,7 +629,7 @@ class _AIDocumentExtractionScreenState extends State<AIDocumentExtractionScreen>
               const SizedBox(height: 24),
               const LbH1('Reading your document…', align: TextAlign.center),
               const SizedBox(height: 8),
-              LbBody('Extracting key details. Takes about 15 seconds.', color: LbColors.muted, align: TextAlign.center),
+              LbBody('Your AI model is extracting key details.', color: LbColors.muted, align: TextAlign.center),
               const SizedBox(height: 24),
               LbCard(
                 child: Column(
@@ -612,8 +645,18 @@ class _AIDocumentExtractionScreenState extends State<AIDocumentExtractionScreen>
               ),
               const SizedBox(height: 16),
               LbBody('AI will suggest fields. You can edit any of them.', color: LbColors.muted, size: 12, align: TextAlign.center),
+              if (_error != null) ...[
+                const SizedBox(height: 16),
+                LbAIBubble(title: 'Something went wrong', message: _error!),
+              ],
               const SizedBox(height: 24),
-              LbButton(label: 'Continue to review', onTap: () => Navigator.pushReplacementNamed(context, '/docs/review-extraction')),
+              if (_error != null)
+                LbButton(label: 'Try again', onTap: () {
+                  setState(() => _error = null);
+                  _run();
+                })
+              else
+                LbButton(label: 'Cancel', variant: LbButtonVariant.secondary, onTap: () => Navigator.pop(context)),
             ],
           ),
         ),
@@ -624,14 +667,50 @@ class _AIDocumentExtractionScreenState extends State<AIDocumentExtractionScreen>
 
 class ReviewExtractionScreen extends StatelessWidget {
   const ReviewExtractionScreen({super.key});
+
+  static String _str(Map m, String key) => m[key] is String ? (m[key] as String) : '';
+
   @override
   Widget build(BuildContext context) {
-    final fields = const [
-      ('PATIENT NAME', 'Arjun Rao', '98%', PillVariant.success),
-      ('ANNUAL INCOME', '₹3,60,000', '95%', PillVariant.success),
-      ('ISSUED ON', '18 Feb 2026', '78%', PillVariant.warn),
-      ('ISSUED BY', 'Tahsildar Office, Bengaluru South', '91%', PillVariant.success),
-    ];
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final extraction = args is Map && args['extraction'] is Map<String, dynamic>
+        ? args['extraction'] as Map<String, dynamic>
+        : null;
+    final fields = extraction == null
+        ? const <Map<String, dynamic>>[]
+        : [for (final e in (extraction['fields'] as List)) if (e is Map<String, dynamic>) e];
+    if (extraction == null || fields.isEmpty) {
+      return Scaffold(
+        backgroundColor: LbColors.bg,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    LbCircleButton(icon: Icons.chevron_left, size: 44, background: LbColors.surface, foreground: LbColors.fg, onTap: () => Navigator.pop(context)),
+                    const SizedBox(width: 12),
+                    const LbEyebrow('REVIEW'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const LbAIBubble(
+                  title: 'Nothing to review yet',
+                  message: 'Extract a document first — the fields to review appear here.',
+                ),
+                const SizedBox(height: 16),
+                LbButton(label: 'Extract a document', onTap: () => Navigator.pushReplacementNamed(context, '/docs/extraction')),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    final docName = _str(extraction, 'docName');
+    final confidence = _str(extraction, 'confidence');
+    final note = _str(extraction, 'note');
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
@@ -652,9 +731,9 @@ class ReviewExtractionScreen extends StatelessWidget {
               const SizedBox(height: 8),
               LbBody('Tap any field to edit. We use this to fill applications.', color: LbColors.muted),
               const SizedBox(height: 16),
-              const LbAIBubble(
+              LbAIBubble(
                 title: 'AI extracted',
-                message: '4 fields from "Income certificate" — confidence 92%.',
+                message: '${fields.length} fields${docName.isEmpty ? '' : ' from "$docName"'}${confidence.isEmpty ? '.' : ' — confidence $confidence.'}',
               ),
               const SizedBox(height: 12),
               LbCard(
@@ -671,13 +750,16 @@ class ReviewExtractionScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  LbEyebrow(fields[i].$1),
+                                  LbEyebrow(_str(fields[i], 'label').isEmpty ? 'FIELD ${i + 1}' : _str(fields[i], 'label').toUpperCase()),
                                   const SizedBox(height: 4),
-                                  Text(fields[i].$2, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                  Text(
+                                    _str(fields[i], 'value').isEmpty ? '—' : _str(fields[i], 'value'),
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                  ),
                                 ],
                               ),
                             ),
-                            LbPill(label: fields[i].$3, variant: fields[i].$4),
+                            LbPill(label: _str(fields[i], 'confidence').isEmpty ? '?' : _str(fields[i], 'confidence'), variant: _str(fields[i], 'value').isEmpty ? PillVariant.warn : PillVariant.success),
                           ],
                         ),
                       ),
@@ -685,16 +767,18 @@ class ReviewExtractionScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              LbInfoBanner(
-                title: 'Note.',
-                body: 'The "Issued on" field had two possible dates. Confirm or correct.',
-                background: LbColors.warnBg,
-                borderColor: Colors.transparent,
-                icon: Icons.warning_amber_outlined,
-                iconColor: LbColors.warn,
-                iconBg: LbColors.surface,
-              ),
+              if (note.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                LbInfoBanner(
+                  title: 'Note.',
+                  body: note,
+                  background: LbColors.warnBg,
+                  borderColor: Colors.transparent,
+                  icon: Icons.warning_amber_outlined,
+                  iconColor: LbColors.warn,
+                  iconBg: LbColors.surface,
+                ),
+              ],
               const SizedBox(height: 24),
               LbButton(label: 'Confirm and save', onTap: () => Navigator.pushReplacementNamed(context, '/docs/added')),
             ],

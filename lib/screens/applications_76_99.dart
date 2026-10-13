@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/theme.dart';
 import '../../data/mock_data.dart';
 import '../../state/app_state.dart';
+import '../../services/ai_service.dart';
 import '../../widgets/components.dart';
 
 class CreateApplicationScreen extends StatelessWidget {
@@ -239,8 +240,60 @@ class _LegendRow extends StatelessWidget {
   }
 }
 
-class AIDraftScreen extends StatelessWidget {
+class AIDraftScreen extends StatefulWidget {
   const AIDraftScreen({super.key});
+  @override
+  State<AIDraftScreen> createState() => _AIDraftScreenState();
+}
+
+class _AIDraftScreenState extends State<AIDraftScreen> {
+  bool _started = false;
+  bool _loading = true;
+  String? _statement;
+  String? _error;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    _run();
+  }
+
+  Future<void> _run() async {
+    final s = AppScope.read(context);
+    try {
+      final text = await s.askAi(
+        task: 'Draft the personal-statement section of this financial-assistance application.',
+        messages: const [
+          AiChatMessage(
+            role: 'user',
+            content: 'Write a first-person personal statement (120-180 words, plain dignified language, no markdown headers) '
+                'for this assistance application, grounded only in the case data. Do not invent names, amounts, or events.',
+          ),
+        ],
+        maxTokens: 600,
+      );
+      if (!mounted) return;
+      setState(() {
+        _statement = text;
+        _loading = false;
+      });
+    } on AiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Something went wrong reaching the AI. Check your connection and settings, then try again.';
+        _loading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -299,18 +352,42 @@ class AIDraftScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(MockData.personalStatementDraft(), style: const TextStyle(fontSize: 13, color: LbColors.fg2, height: 1.5)),
-                    const SizedBox(height: 12),
-                    GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, '/app/edit'),
-                      child: const Row(
+                    if (_loading)
+                      const Row(
                         children: [
-                          Text('Edit', style: TextStyle(fontSize: 13, color: LbColors.fg, fontWeight: FontWeight.w600)),
-                          SizedBox(width: 4),
-                          Icon(Icons.arrow_outward, size: 14, color: LbColors.fg),
+                          LbSpinner(size: 16, color: LbColors.accent),
+                          SizedBox(width: 8),
+                          Text('Drafting your statement…', style: TextStyle(fontSize: 13, color: LbColors.muted, fontStyle: FontStyle.italic)),
                         ],
                       ),
-                    ),
+                    if (_error != null) ...[
+                      Text(_error!, style: const TextStyle(fontSize: 13, color: LbColors.danger, height: 1.5)),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _error = null;
+                            _loading = true;
+                          });
+                          _run();
+                        },
+                        child: const Text('Try again', style: TextStyle(fontSize: 13, color: LbColors.accent, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                    if (_statement != null) ...[
+                      Text(_statement!, style: const TextStyle(fontSize: 13, color: LbColors.fg2, height: 1.5)),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () => Navigator.pushNamed(context, '/app/edit', arguments: {'statement': _statement}),
+                        child: const Row(
+                          children: [
+                            Text('Edit', style: TextStyle(fontSize: 13, color: LbColors.fg, fontWeight: FontWeight.w600)),
+                            SizedBox(width: 4),
+                            Icon(Icons.arrow_outward, size: 14, color: LbColors.fg),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -470,7 +547,66 @@ class EditApplicationScreen extends StatefulWidget {
 }
 
 class _EditApplicationScreenState extends State<EditApplicationScreen> {
-  final _ctrl = TextEditingController(text: MockData.personalStatementDraft());
+  final _ctrl = TextEditingController();
+  bool _started = false;
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final passed = args is Map ? (args['statement'] as String? ?? '') : '';
+    if (passed.trim().isNotEmpty) {
+      _ctrl.text = passed;
+      return;
+    }
+    _loading = true;
+    _run();
+  }
+
+  Future<void> _run() async {
+    final s = AppScope.read(context);
+    try {
+      final text = await s.askAi(
+        task: 'Draft the personal-statement section of this financial-assistance application.',
+        messages: const [
+          AiChatMessage(
+            role: 'user',
+            content: 'Write a first-person personal statement (120-180 words, plain dignified language, no markdown headers) '
+                'for this assistance application, grounded only in the case data. Do not invent names, amounts, or events.',
+          ),
+        ],
+        maxTokens: 600,
+      );
+      if (!mounted) return;
+      setState(() {
+        _ctrl.text = text;
+        _loading = false;
+      });
+    } on AiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Something went wrong reaching the AI. Check your connection and settings, then try again.';
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -509,21 +645,59 @@ class _EditApplicationScreenState extends State<EditApplicationScreen> {
               const SizedBox(height: 16),
               const LbEyebrow('YOUR STATEMENT'),
               const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(color: LbColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: LbColors.border)),
-                padding: const EdgeInsets.all(12),
-                child: TextField(
-                  controller: _ctrl,
-                  maxLines: 12,
-                  minLines: 8,
-                  style: const TextStyle(fontSize: 14, height: 1.5),
-                  decoration: const InputDecoration(border: InputBorder.none, isCollapsed: true, contentPadding: EdgeInsets.zero),
+              if (_loading)
+                const LbCard(
+                  child: Row(
+                    children: [
+                      LbSpinner(size: 16, color: LbColors.accent),
+                      SizedBox(width: 8),
+                      Text('Drafting your statement…', style: TextStyle(fontSize: 13, color: LbColors.muted, fontStyle: FontStyle.italic)),
+                    ],
+                  ),
                 ),
-              ),
+              if (_error != null) ...[
+                LbCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_error!, style: const TextStyle(fontSize: 13, color: LbColors.danger, height: 1.5)),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _error = null;
+                            _loading = true;
+                          });
+                          _run();
+                        },
+                        child: const Text('Try again', style: TextStyle(fontSize: 13, color: LbColors.accent, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (!_loading && _error == null)
+                Container(
+                  decoration: BoxDecoration(color: LbColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: LbColors.border)),
+                  padding: const EdgeInsets.all(12),
+                  child: TextField(
+                    controller: _ctrl,
+                    maxLines: 12,
+                    minLines: 8,
+                    style: const TextStyle(fontSize: 14, height: 1.5),
+                    decoration: const InputDecoration(border: InputBorder.none, isCollapsed: true, contentPadding: EdgeInsets.zero),
+                  ),
+                ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(child: LbButton(label: '↺ Regenerate', variant: LbButtonVariant.ghost, fontSize: 13, height: 44, onTap: () => Navigator.pushNamed(context, '/app/draft'))),
+                  Expanded(child: LbButton(label: '↺ Regenerate', variant: LbButtonVariant.ghost, fontSize: 13, height: 44, onTap: () {
+                    setState(() {
+                      _error = null;
+                      _loading = true;
+                    });
+                    _run();
+                  })),
                   const SizedBox(width: 8),
                   Expanded(child: LbButton(label: 'Use original', variant: LbButtonVariant.ghost, fontSize: 13, height: 44, onTap: () => Navigator.pushNamed(context, '/app/draft'))),
                 ],

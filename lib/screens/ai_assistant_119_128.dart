@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/theme.dart';
+import '../../state/app_state.dart';
+import '../../services/ai_service.dart';
 import '../../widgets/components.dart';
 
 Widget _backHeader(BuildContext context, {String? eyebrow, VoidCallback? onBack}) {
@@ -91,32 +93,123 @@ class _AIChatScreenState extends State<AIChatScreen> {
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
 
+  // Greeting only — every answer below it comes from the configured AI.
   final List<_Msg> messages = [
-    _Msg(text: 'Hi Priya. What would you like help with today?', fromUser: false),
-    _Msg(text: 'What should I do next?', fromUser: true),
-    _Msg(text: "Based on your case, I'd suggest one of these next:\n\n1. Upload the income certificate. 3 programs need it and it could unlock up to ₹3.2L in aid. Takes ~5 minutes.\n\n2. Wait for Heart Care Trust's response. Day 2 of 14. No action needed yet.\n\n3. Apply to Apollo Charity Care. 88% match, separate from the others.", fromUser: false),
-    _Msg(text: 'Will adding the income certificate really help that much?', fromUser: true),
-    _Msg(text: "Yes — but only if you upload it. Without proof of income, three programs can't calculate your eligibility. With it, your total possible aid goes from ₹1.7L to ₹3.2L across open applications.", fromUser: false),
+    _Msg(text: "Hi! I'm LifeBridge AI. Ask me anything about the case, programs, documents, or next steps.", fromUser: false),
   ];
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _scrollDown() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scroll.hasClients) return;
+      _scroll.animateTo(_scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    });
+  }
+
+  Future<void> _send() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty || _sending) return;
+    final s = AppScope.read(context);
+    setState(() {
+      messages.add(_Msg(text: text, fromUser: true));
+      _ctrl.clear();
+      _sending = true;
+    });
+    _scrollDown();
+    String reply;
+    var failed = false;
+    try {
+      reply = await s.askAi(
+        task: "Answer the user's question about their patient-assistance case. Use the earlier conversation for context.",
+        messages: [for (final m in messages) AiChatMessage(role: m.fromUser ? 'user' : 'assistant', content: m.text)],
+      );
+    } on AiException catch (e) {
+      reply = e.message;
+      failed = true;
+    } catch (_) {
+      reply = 'Something went wrong reaching the AI. Check your connection and settings, then try again.';
+      failed = true;
+    }
+    if (!mounted) return;
+    setState(() {
+      messages.add(_Msg(text: reply, fromUser: false, error: failed));
+      _sending = false;
+    });
+    _scrollDown();
+  }
+
+  void _clearChat() {
+    if (_sending) return;
+    setState(() {
+      messages
+        ..clear()
+        ..add(_Msg(text: "Hi! I'm LifeBridge AI. Ask me anything about the case, programs, documents, or next steps.", fromUser: false));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    String model = 'your AI model';
+    try {
+      model = AppScope.read(context).aiModel;
+    } catch (_) {}
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-              child: _backHeader(context, eyebrow: 'AI ASSISTANT'),
+              padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
+              child: Row(
+                children: [
+                  Expanded(child: _backHeader(context, eyebrow: 'AI ASSISTANT')),
+                  LbTextButton(label: 'New chat', onTap: _sending ? null : _clearChat),
+                ],
+              ),
             ),
             Expanded(
               child: ListView.separated(
                 controller: _scroll,
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-                itemCount: messages.length,
+                itemCount: messages.length + (_sending ? 1 : 0),
                 separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (_, i) => LbAIBubble(message: messages[i].text, isUser: messages[i].fromUser),
+                itemBuilder: (_, i) {
+                  if (i >= messages.length) {
+                    return const LbAIBubble(
+                      message: '',
+                      extra: Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            LbSpinner(size: 16, color: LbColors.accent),
+                            SizedBox(width: 8),
+                            Text('LifeBridge AI is thinking…', style: TextStyle(fontSize: 12, color: LbColors.muted, fontStyle: FontStyle.italic)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  final m = messages[i];
+                  if (m.fromUser) return LbAIBubble(message: m.text, isUser: true);
+                  if (m.error) {
+                    return LbAIBubble(
+                      title: 'Something went wrong',
+                      message: m.text,
+                      extra: const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Text('Fix the issue above, then send your message again.', style: TextStyle(fontSize: 12, color: LbColors.muted)),
+                      ),
+                    );
+                  }
+                  return LbAIBubble(title: 'LifeBridge AI · $model', message: m.text);
+                },
               ),
             ),
             Padding(
@@ -129,20 +222,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: Row(
-                children: [
-                  Expanded(child: LbButton(label: 'Send', onTap: () {
-                    if (_ctrl.text.trim().isEmpty) return;
-                    setState(() {
-                      messages.add(_Msg(text: _ctrl.text, fromUser: true));
-                      _ctrl.clear();
-                    });
-                    Navigator.pushNamed(context, '/ai/thinking');
-                  })),
-                  const SizedBox(width: 8),
-                  Expanded(child: LbButton(label: 'Sample response', variant: LbButtonVariant.secondary, onTap: () => Navigator.pushNamed(context, '/ai/response'))),
-                ],
-              ),
+              child: LbButton(label: _sending ? 'Thinking…' : 'Send', onTap: _sending ? null : _send),
             ),
           ],
         ),
@@ -154,7 +234,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
 class _Msg {
   final String text;
   final bool fromUser;
-  _Msg({required this.text, required this.fromUser});
+  final bool error;
+  _Msg({required this.text, required this.fromUser, this.error = false});
 }
 
 class AIProcessingScreen extends StatefulWidget {
@@ -164,16 +245,46 @@ class AIProcessingScreen extends StatefulWidget {
 }
 
 class _AIProcessingScreenState extends State<AIProcessingScreen> {
+  bool _started = false;
+
   @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(seconds: 4), () {
-      if (mounted) Navigator.pushReplacementNamed(context, '/ai/response');
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final question = args is Map ? (args['question'] as String? ?? '') : '';
+    if (question.trim().isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.pushReplacementNamed(context, '/ai/response');
+      });
+      return;
+    }
+    _run(question);
+  }
+
+  Future<void> _run(String question) async {
+    final s = AppScope.read(context);
+    try {
+      final answer = await s.askAi(
+        task: 'Answer the user question about their patient-assistance case concisely.',
+        messages: [AiChatMessage(role: 'user', content: question)],
+      );
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/ai/response', arguments: {'question': question, 'answer': answer});
+    } on AiException catch (e) {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/ai/response', arguments: {'question': question, 'error': e.message});
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/ai/response', arguments: {'question': question, 'error': 'Something went wrong reaching the AI. Check your connection and settings, then try again.'});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final question = args is Map ? (args['question'] as String? ?? 'Thinking…') : 'Thinking…';
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
@@ -184,7 +295,7 @@ class _AIProcessingScreenState extends State<AIProcessingScreen> {
             children: [
               _backHeader(context, eyebrow: 'THINKING…'),
               const SizedBox(height: 12),
-              const LbAIBubble(message: 'Why was Heart Care Trust recommended?', isUser: true),
+              LbAIBubble(message: question, isUser: true),
               const SizedBox(height: 8),
               const LbAIBubble(
                 extra: Padding(
@@ -202,7 +313,7 @@ class _AIProcessingScreenState extends State<AIProcessingScreen> {
               const SizedBox(height: 16),
               LbBody('Most answers arrive in under 5 seconds.', color: LbColors.muted, align: TextAlign.center),
               const SizedBox(height: 16),
-              LbButton(label: 'View answer', variant: LbButtonVariant.secondary, onTap: () => Navigator.pushReplacementNamed(context, '/ai/response')),
+              LbButton(label: 'Cancel', variant: LbButtonVariant.secondary, onTap: () => Navigator.pop(context)),
             ],
           ),
         ),
@@ -211,16 +322,66 @@ class _AIProcessingScreenState extends State<AIProcessingScreen> {
   }
 }
 
-class AIResponseScreen extends StatelessWidget {
+class AIResponseScreen extends StatefulWidget {
   const AIResponseScreen({super.key});
   @override
+  State<AIResponseScreen> createState() => _AIResponseScreenState();
+}
+
+class _AIResponseScreenState extends State<AIResponseScreen> {
+  bool _started = false;
+  bool _loading = false;
+  String _question = '';
+  String? _answer;
+  String? _error;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map) {
+      _question = (args['question'] as String? ?? '').trim();
+      _answer = args['answer'] as String?;
+      _error = args['error'] as String?;
+    }
+    // Arrived with a question but no answer yet: generate it live.
+    if (_question.isNotEmpty && _answer == null && _error == null) {
+      _loading = true;
+      _run(_question);
+    }
+  }
+
+  Future<void> _run(String question) async {
+    final s = AppScope.read(context);
+    try {
+      final answer = await s.askAi(
+        task: 'Answer the user question about their patient-assistance case concisely.',
+        messages: [AiChatMessage(role: 'user', content: question)],
+      );
+      if (!mounted) return;
+      setState(() {
+        _answer = answer;
+        _loading = false;
+      });
+    } on AiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Something went wrong reaching the AI. Check your connection and settings, then try again.';
+        _loading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final reasons = const [
-      'Cardiac-specific — focuses on procedures like Arjun\'s',
-      'Income threshold met (₹6.4L < ₹8L cap)',
-      'Karnataka resident match',
-      'Verified by LifeBridge on 12 March 2026',
-    ];
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
@@ -231,60 +392,145 @@ class AIResponseScreen extends StatelessWidget {
             children: [
               _backHeader(context, eyebrow: 'AI ASSISTANT'),
               const SizedBox(height: 12),
-              const LbAIBubble(message: 'Why was Heart Care Trust recommended?', isUser: true),
-              const SizedBox(height: 8),
-              const LbAIBubble(
-                message: 'Heart Care Trust came up because of four reasons. None of them are guarantees — the trust still reviews every application independently.',
-              ),
-              const SizedBox(height: 12),
-              for (int i = 0; i < reasons.length; i++) ...[
-                LbCard(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 24, height: 24,
-                        decoration: const BoxDecoration(color: LbColors.accentSoft, shape: BoxShape.circle),
-                        alignment: Alignment.center,
-                        child: Text('${i + 1}', style: const TextStyle(color: LbColors.accent, fontSize: 12, fontWeight: FontWeight.w600)),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(reasons[i], style: const TextStyle(fontSize: 14))),
-                    ],
-                  ),
+              if (_question.isEmpty && _answer == null && _error == null && !_loading) ...[
+                const LbAIBubble(
+                  title: 'No answer yet',
+                  message: 'Ask a question in the AI chat first — answers appear here.',
                 ),
-                const SizedBox(height: 8),
-              ],
-              const SizedBox(height: 8),
-              LbBody('Match score: 92%. The strongest fit we found.', color: LbColors.muted, size: 12, align: TextAlign.center),
-              const SizedBox(height: 16),
-              LbButton(label: 'Continue', onTap: () => Navigator.pushNamed(context, '/ai/action')),
-              const SizedBox(height: 8),
-              LbButton(label: 'Ask another question', variant: LbButtonVariant.secondary, onTap: () => Navigator.pushNamed(context, '/ai/assistant')),
-              const SizedBox(height: 8),
-              Center(
-                child: GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, '/ai/cant-determine'),
-                  child: const Text.rich(
-                    TextSpan(
-                      text: "LifeBridge brings in a ",
-                      style: TextStyle(fontSize: 12, color: LbColors.muted),
-                      children: [TextSpan(text: 'human advisor', style: TextStyle(color: LbColors.accent, fontWeight: FontWeight.w600)), TextSpan(text: ' when needed')],
+                const SizedBox(height: 16),
+                LbButton(label: 'Open AI chat', onTap: () => Navigator.pushNamed(context, '/ai/chat')),
+              ] else ...[
+                if (_question.isNotEmpty) ...[
+                  LbAIBubble(message: _question, isUser: true),
+                  const SizedBox(height: 8),
+                ],
+                if (_loading)
+                  const LbAIBubble(
+                    message: '',
+                    extra: Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Row(
+                        children: [
+                          LbSpinner(size: 16, color: LbColors.accent),
+                          SizedBox(width: 8),
+                          Text('LifeBridge AI is thinking…', style: TextStyle(fontSize: 12, color: LbColors.muted, fontStyle: FontStyle.italic)),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ),
+                if (_error != null) ...[
+                  LbAIBubble(title: 'Something went wrong', message: _error!),
+                  const SizedBox(height: 16),
+                  LbButton(
+                    label: 'Try again',
+                    onTap: () {
+                      setState(() {
+                        _error = null;
+                        _loading = true;
+                      });
+                      _run(_question);
+                    },
+                  ),
+                ],
+                if (_answer != null) ...[
+                  LbAIBubble(title: 'LifeBridge AI', message: _answer!),
+                  const SizedBox(height: 8),
+                  LbBody('Generated by ${_modelName(context)} for your case. Verify important details with the program.', color: LbColors.muted, size: 12, align: TextAlign.center),
+                  const SizedBox(height: 16),
+                  LbButton(label: 'Continue', onTap: () => Navigator.pushNamed(context, '/ai/action', arguments: {'context': 'Q: $_question\nA: $_answer'})),
+                  const SizedBox(height: 8),
+                  LbButton(label: 'Ask another question', variant: LbButtonVariant.secondary, onTap: () => Navigator.pushNamed(context, '/ai/assistant')),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, '/ai/cant-determine'),
+                      child: const Text.rich(
+                        TextSpan(
+                          text: "LifeBridge brings in a ",
+                          style: TextStyle(fontSize: 12, color: LbColors.muted),
+                          children: [TextSpan(text: 'human advisor', style: TextStyle(color: LbColors.accent, fontWeight: FontWeight.w600)), TextSpan(text: ' when needed')],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ],
           ),
         ),
       ),
     );
   }
+
+  String _modelName(BuildContext context) {
+    try {
+      return AppScope.read(context).aiModel;
+    } catch (_) {
+      return 'your AI model';
+    }
+  }
 }
 
-class AIActionScreen extends StatelessWidget {
+class AIActionScreen extends StatefulWidget {
   const AIActionScreen({super.key});
+  @override
+  State<AIActionScreen> createState() => _AIActionScreenState();
+}
+
+class _AIActionScreenState extends State<AIActionScreen> {
+  bool _started = false;
+  bool _loading = true;
+  String? _suggestion;
+  String? _error;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final prior = args is Map ? (args['context'] as String? ?? '') : '';
+    _run(prior);
+  }
+
+  Future<void> _run(String prior) async {
+    final s = AppScope.read(context);
+    try {
+      final text = await s.askAi(
+        task: 'Suggest ONE concrete next action for the case (2-4 sentences, plain language). '
+            'Ground it in the case data. If prior conversation is given, build on it. Do not invent approvals or deadlines.',
+        messages: [AiChatMessage(role: 'user', content: prior.isEmpty ? 'What single action should I take next on this case?' : 'Conversation so far:\n$prior\n\nWhat single action should I take next?')],
+      );
+      if (!mounted) return;
+      setState(() {
+        _suggestion = text;
+        _loading = false;
+      });
+    } on AiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Something went wrong reaching the AI. Check your connection and settings, then try again.';
+        _loading = false;
+      });
+    }
+  }
+
+  void _retry() {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final prior = args is Map ? (args['context'] as String? ?? '') : '';
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
+    _run(prior);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -297,10 +543,31 @@ class AIActionScreen extends StatelessWidget {
             children: [
               _backHeader(context, eyebrow: 'SUGGESTED ACTION'),
               const SizedBox(height: 12),
-              const LbAIBubble(
-                title: 'LifeBridge AI · suggested action',
-                message: 'Send a follow-up to Seva Community Fund.\n\n9 days without a response. A polite follow-up is appropriate and can speed up decisions by an average of 6 days.',
-              ),
+              if (_loading)
+                const LbAIBubble(
+                  title: 'LifeBridge AI · suggested action',
+                  message: '',
+                  extra: Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Row(
+                      children: [
+                        LbSpinner(size: 16, color: LbColors.accent),
+                        SizedBox(width: 8),
+                        Text('LifeBridge AI is thinking…', style: TextStyle(fontSize: 12, color: LbColors.muted, fontStyle: FontStyle.italic)),
+                      ],
+                    ),
+                  ),
+                ),
+              if (_error != null) ...[
+                LbAIBubble(title: 'Something went wrong', message: _error!),
+                const SizedBox(height: 12),
+                LbButton(label: 'Try again', onTap: _retry),
+              ],
+              if (_suggestion != null)
+                LbAIBubble(
+                  title: 'LifeBridge AI · suggested action',
+                  message: _suggestion!,
+                ),
               const SizedBox(height: 12),
               LbCard(
                 child: Column(
@@ -426,7 +693,12 @@ class _AINeedsInfoScreenState extends State<AINeedsInfoScreen> {
               const SizedBox(height: 12),
               LbCheckbox(label: 'Remember my preference for next time.', value: _remember, onChanged: (v) => setState(() => _remember = v)),
               const SizedBox(height: 16),
-              LbButton(label: 'Submit', onTap: () => Navigator.pushNamed(context, '/ai/response')),
+              LbButton(label: 'Submit', onTap: () {
+                const opts = ['After insurance', 'Before insurance', "I'm not sure"];
+                final q = 'Funding-gap question: is the gap calculated after insurance or before? '
+                    'My clarification: ${opts[_sel]}. Please answer the funding-gap question accordingly.';
+                Navigator.pushReplacementNamed(context, '/ai/thinking', arguments: {'question': q});
+              }),
             ],
           ),
         ),

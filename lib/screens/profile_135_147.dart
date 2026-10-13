@@ -2,6 +2,7 @@ import '../../models/models.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/theme.dart';
 import '../../state/app_state.dart';
+import '../../services/ai_service.dart';
 import '../../widgets/components.dart';
 
 Widget _backHeader(BuildContext context, {String? eyebrow, VoidCallback? onBack}) {
@@ -183,6 +184,7 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
   @override
   Widget build(BuildContext context) {
+    final s = AppScope.read(context);
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
@@ -206,6 +208,13 @@ class SettingsScreen extends StatelessWidget {
                     LbListRow(icon: Icons.shield_outlined, title: 'Privacy & consent', subtitle: 'Data sharing, AI usage', onTap: () => Navigator.pushNamed(context, '/settings/privacy')),
                     const Divider(color: LbColors.borderSoft, height: 1),
                     LbListRow(icon: Icons.extension_outlined, title: 'Data sharing', subtitle: 'Connected organizations', onTap: () => Navigator.pushNamed(context, '/settings/data-sharing')),
+                    const Divider(color: LbColors.borderSoft, height: 1),
+                    LbListRow(
+                      icon: Icons.smart_toy_outlined,
+                      title: 'AI assistant',
+                      subtitle: s.aiConfigured ? 'Model · ${s.aiModel}' : 'Not configured',
+                      onTap: () => Navigator.pushNamed(context, '/settings/ai'),
+                    ),
                   ],
                 ),
               ),
@@ -316,6 +325,148 @@ class _NotificationPrefsScreenState extends State<NotificationPrefsScreen> {
               LbBody('Urgent program updates will still come through quiet hours.', color: LbColors.muted, size: 12),
               const SizedBox(height: 24),
               LbButton(label: 'Save preferences', onTap: () => Navigator.pop(context)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AiSettingsScreen extends StatefulWidget {
+  const AiSettingsScreen({super.key});
+  @override
+  State<AiSettingsScreen> createState() => _AiSettingsScreenState();
+}
+
+class _AiSettingsScreenState extends State<AiSettingsScreen> {
+  final _url = TextEditingController();
+  final _key = TextEditingController();
+  final _model = TextEditingController();
+  bool _init = false;
+  bool _fetching = false;
+  List<String>? _models;
+  String? _fetchError;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_init) {
+      _init = true;
+      final s = AppScope.read(context);
+      _url.text = s.aiBaseUrl;
+      _key.text = s.aiApiKey;
+      _model.text = s.aiModel;
+    }
+  }
+
+  @override
+  void dispose() {
+    _url.dispose();
+    _key.dispose();
+    _model.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchModels() async {
+    if (_fetching) return;
+    setState(() {
+      _fetching = true;
+      _fetchError = null;
+    });
+    try {
+      final ids = await AiService.fetchModels(baseUrl: _url.text, apiKey: _key.text);
+      if (!mounted) return;
+      setState(() {
+        _models = ids;
+        _fetching = false;
+      });
+    } on AiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _fetchError = e.message;
+        _fetching = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _fetchError = 'Could not fetch models. Check the base URL and key, or type the model name manually.';
+        _fetching = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppScope.read(context);
+    return Scaffold(
+      backgroundColor: LbColors.bg,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _backHeader(context),
+              const SizedBox(height: 12),
+              const LbH1('AI assistant setup'),
+              const SizedBox(height: 8),
+              LbBody('Connect any OpenAI-compatible AI. Every assistant, analysis, and draft in the app uses these settings.', color: LbColors.muted),
+              const SizedBox(height: 20),
+              LbField(label: 'Base URL', hint: 'https://api.openai.com/v1', controller: _url, keyboardType: TextInputType.url),
+              const SizedBox(height: 16),
+              LbField(label: 'Model', hint: 'e.g. gpt-4o-mini', controller: _model),
+              const SizedBox(height: 12),
+              LbButton(
+                label: _fetching ? 'Fetching models…' : 'Fetch available models',
+                variant: LbButtonVariant.secondary,
+                onTap: _fetching ? null : _fetchModels,
+              ),
+              if (_fetching) ...[
+                const SizedBox(height: 12),
+                const Row(
+                  children: [
+                    LbSpinner(size: 16, color: LbColors.accent),
+                    SizedBox(width: 8),
+                    Text('Asking the provider for its model list…', style: TextStyle(fontSize: 13, color: LbColors.muted, fontStyle: FontStyle.italic)),
+                  ],
+                ),
+              ],
+              if (_fetchError != null) ...[
+                const SizedBox(height: 12),
+                LbAIBubble(title: 'Could not fetch models', message: _fetchError!),
+              ],
+              if (_models != null) ...[
+                const SizedBox(height: 16),
+                LbEyebrow('AVAILABLE MODELS · ${_models!.length}'),
+                const SizedBox(height: 8),
+                for (final id in _models!) ...[
+                  LbChoice(
+                    title: id,
+                    selected: _model.text.trim() == id,
+                    onTap: () => setState(() => _model.text = id),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                LbBody('Tap a model to select it, then save below. All AI features use the saved model.', color: LbColors.muted, size: 12),
+              ],
+              const SizedBox(height: 16),
+              LbField(label: 'API key', hint: 'Stored only on this device', controller: _key, obscure: true),
+              const SizedBox(height: 16),
+              LbInfoBanner(
+                title: s.aiConfigured ? 'Status: configured (model · ${s.aiModel}).' : 'Status: not configured.',
+                body: 'Your key stays on this phone and is sent only to the base URL above. It is never shown, logged, or shared.',
+                background: LbColors.infoBg,
+                borderColor: LbColors.cardWarnBorder,
+                icon: Icons.shield_outlined,
+                iconColor: LbColors.accent,
+                iconBg: LbColors.surface,
+              ),
+              const SizedBox(height: 24),
+              LbButton(label: 'Save AI settings', onTap: () {
+                AppScope.read(context).saveAiSettings(baseUrl: _url.text, apiKey: _key.text, model: _model.text);
+                Navigator.pop(context);
+              }),
             ],
           ),
         ),
