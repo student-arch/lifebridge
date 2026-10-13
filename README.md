@@ -5,7 +5,7 @@
 ![Flutter](https://img.shields.io/badge/Flutter-3.47 Stable-02569B?logo=flutter)
 ![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart)
 ![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)
-![Tests](https://img.shields.io/badge/Tests-38 Passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-39 Passing-brightgreen)
 ![Analyzer](https://img.shields.io/badge/flutter_analyze-Clean-brightgreen)
 
 ---
@@ -16,7 +16,7 @@
 |---|---|
 | ![Splash](docs/images/splash.png) | ![Auth](docs/images/auth.png) |
 
-*Screenshots captured from a real device (Redmi Note 10S, Android 13).*
+*Screenshots captured from a real device (Redmi Note 10S, Android 13); demo data shown.*
 
 ---
 
@@ -60,7 +60,7 @@ sequenceDiagram
     UI->>State: askAi(task, history)
     State->>State: prepend system prompt + case context<br/>trim history to last 10
     State->>Svc: POST {baseURL}/chat/completions<br/>{model, messages, temperature, max_tokens, response_format?}
-    Svc->>API: Bearer <key> (never logged)
+    Svc->>API: Bearer key, never logged
     API-->>Svc: choices[0].message.content (or block list / reasoning / legacy text / error envelope)
     Svc-->>State: parsed text (or precise AiException)
     State-->>UI: reply renders / spinner / error + retry
@@ -79,7 +79,7 @@ sequenceDiagram
 | Long chats | Sliding window (last 10 messages sent; UI keeps full history) + a **New chat** reset; context-overflow (400) is detected and explained |
 | Reply shapes | Accepts string content, content-block lists, `reasoning_content`, legacy `.text`, gateway envelopes; 200-status error envelopes surface the provider's real message; unparseable bodies quote a preview |
 | Errors | Mapped to plain language: no network, timeout, 401 bad key, 404 bad endpoint/model, 429 rate-limit (with free-tier guidance), 5xx; key never appears in messages, logs, or UI |
-| Testability | Injectable `http.Client`; 38 mocked tests cover bodies, flags, mappings, trimming, persistence, and every screen's error path with zero real network calls |
+| Testability | Injectable `http.Client`; 39 tests cover bodies, flags, mappings, trimming, persistence, launch flow, and every screen's error path with zero real network calls |
 
 > ℹ️ **Key note:** no API key is bundled with the app — each user enters a personal key once in Settings. Never commit a real key: GitHub push protection blocks it, and anything in git/APKs is extractable.
 
@@ -95,12 +95,12 @@ flowchart TB
     subgraph State["State (state/app_state.dart)"]
         AS["AppState : ChangeNotifier<br/>auth · case data · prefs · AI settings"]
     end
-    subgraph Nav["Routing (router.dart · ~164 routes)"]
+    subgraph Nav["Routing (router.dart · 165 routes)"]
         R["AppRouter.onGenerateRoute<br/>string → screen map"]
         SH["MainShell (shell.dart)<br/>5-tab IndexedStack + auth guard"]
     end
     subgraph UI["UI (screens/ + widgets/components.dart)"]
-        SCR["18 screen files · ~30 Lb* widgets<br/>LbScaffold LbCard LbButton LbField LbChoice …"]
+        SCR["19 screen files · 40+ Lb widgets<br/>LbScaffold LbCard LbButton LbField LbChoice …"]
     end
     subgraph Data["Data"]
         MD["MockData fixtures"]
@@ -127,7 +127,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    S["/ Splash<br/>(animated, ~1.5s)"] --> A["/auth AuthScreen<br/>Log in | Sign up tabs"]
+    S["/ Splash<br/>(animated, ~1.5s)"] --> A["/auth AuthScreen<br/>Log in / Sign up tabs"]
     A -->|Log in| H["/home dashboard"]
     A -->|Create account<br/>(name + contact + password)| H
     H --> P["Later, when needed:<br/>Profile › Edit · Settings · case flow"]
@@ -142,15 +142,15 @@ Cold start used to be **11 screens / ~15 fields** (welcome → 3× onboarding �
 ```
 lib/
 ├── main.dart                  # Entry: LifeBridgeApp (loads AI settings at startup)
-├── router.dart                # ~164 named routes + AppNavigator + HomeShell
+├── router.dart                # 165 named routes + AppNavigator + HomeShell
 ├── shell.dart                 # MainShell: 5-tab IndexedStack + auth guard
 ├── core/theme/theme.dart      # LbColors / LbRadius / LbSpacing / buildLbTheme()
 ├── state/app_state.dart       # The single store: auth, case data, prefs, AI settings
 ├── data/mock_data.dart        # All demo fixtures (Bhimavaram persona)
 ├── models/models.dart         # Immutable data classes (User, Patient, CaseEntity, …)
 ├── services/ai_service.dart   # OpenAI-compatible client + JSON parsing + errors
-├── widgets/components.dart   # ~30 shared Lb* widgets
-└── screens/                   # 18 files, one flow each (suffix = design frame range)
+├── widgets/components.dart   # 40+ shared Lb widgets
+└── screens/                   # 19 files, one flow each (suffix = design frame range)
     ├── splash_01.dart         # Splash + Welcome + Onboarding ×3
     ├── get_started_06_07.dart # Role + user-type (off the launch path)
     ├── auth_08.dart           # Unified Log in / Sign up (the launch entry)
@@ -177,7 +177,7 @@ android/                       # INTERNET permission declared; Impeller opted ou
                                # (blank frames on Mali GPUs — Skia fallback)
 ```
 
-**Route groups** (see `router.dart` for the authoritative map): auth/onboarding (20) · home (4) · case wizard + detail (20) · AI analysis/assistant (15) · support (9) · docs (11) · applications (24) · follow-ups (19) · notifications (6) · profile/settings (14) · emergency (7) · system states (11).
+**Route groups** (see `router.dart` for the authoritative map — 165 total): auth/onboarding (21) · home (4) · case wizard + detail (20 + `/cases` root) · AI analysis/assistant (15) · support (9) · docs (11 + `/docs` root) · applications (24) · follow-ups (18 + `/followups` and `/find-alternative` roots) · notifications (5 + root) · profile/settings/help (15) · emergency (6 + root) · system states (11).
 
 ---
 
@@ -197,7 +197,7 @@ flutter pub get
 
 # 3. Verify
 flutter analyze        # must report: No issues found!
-flutter test           # 38 tests, all green
+flutter test           # 39 tests, all green
 
 # 4. Run / install on a USB-attached phone
 flutter devices                      # confirm the phone is listed
@@ -226,7 +226,7 @@ flutter build apk --release          # → build/app/outputs/flutter-apk/app-rel
 ## ✅ Verification & device notes
 
 - `flutter analyze` — clean (lint set: `flutter_lints`).
-- `flutter test` — 38 tests; AI tests use mocked HTTP / dead endpoints, so the suite makes **zero real network calls**.
+- `flutter test` — 39 tests; AI tests use mocked HTTP / dead endpoints, so the suite makes **zero real network calls**.
 - Proven on-device via `adb`: screenshots above, `uiautomator` checks, and `logcat` diagnosis of a real white-screen incident (an `Expanded`-in-`Row` layout crash, since fixed, with regression coverage in the launch test).
 - Release is debug-key signed (direct-install sharing, not Play Store).
 
@@ -240,4 +240,5 @@ flutter build apk --release          # → build/app/outputs/flutter-apk/app-rel
 - Domain data is in-memory mocks (no backend sync); secure storage (e.g. flutter_secure_storage) would harden the saved key.
 - Long wizard chains build deep back stacks (`pushNamed` throughout) — candidates for replace/pop at irreversible steps.
 - Several contact/call buttons are inert placeholders; program-detail screens always show the first program (needs an id argument).
+- Deliberately deterministic (not live AI): the eligibility questionnaire and why-match explainer are rules/info UI with no AI-generation claims.
 - ~26 registered routes are currently unreachable (legacy onboarding, variant home screens, state gallery) — kept for compatibility.
