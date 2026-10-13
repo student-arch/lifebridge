@@ -44,12 +44,14 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  LbCheckbox(
-                    label: 'Remember me',
-                    value: _remember,
-                    onChanged: (v) => setState(() => _remember = v),
+                  Expanded(
+                    child: LbCheckbox(
+                      label: 'Remember me',
+                      value: _remember,
+                      onChanged: (v) => setState(() => _remember = v),
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 12),
                   GestureDetector(
                     onTap: () => Navigator.pushNamed(context, '/forgot'),
                     child: const Text('Forgot password?', style: TextStyle(fontSize: 13, color: LbColors.accent, fontWeight: FontWeight.w600)),
@@ -79,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 32),
               Center(
                 child: GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, '/create-account'),
+                  onTap: () => Navigator.pushReplacementNamed(context, '/auth', arguments: const {'tab': 1}),
                   child: const Text.rich(
                     TextSpan(
                       text: 'New to LifeBridge? ',
@@ -222,7 +224,7 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  LbBody('Sent to +91 98 7654 3210 · expires in ', color: LbColors.muted),
+                  Expanded(child: LbBody('Sent to +91 98 7654 3210 · expires in ', color: LbColors.muted)),
                   LbNumber(_fmt(_secondsLeft), size: 15),
                 ],
               ),
@@ -233,7 +235,7 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
                   final filled = _ctrls[i].text.isNotEmpty;
                   final active = _nodes[i].hasFocus;
                   return SizedBox(
-                    width: 48,
+                    width: 44,
                     height: 56,
                     child: TextField(
                       controller: _ctrls[i],

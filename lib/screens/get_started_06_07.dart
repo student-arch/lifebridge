@@ -55,11 +55,11 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  LbButton(label: 'Create my account', onTap: () => Navigator.pushNamed(context, '/user-type')),
+                  LbButton(label: 'Create my account', onTap: () => Navigator.pushReplacementNamed(context, '/auth', arguments: const {'tab': 1})),
                   const SizedBox(height: 12),
                   Center(
                     child: GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, '/login'),
+                      onTap: () => Navigator.pushReplacementNamed(context, '/auth', arguments: const {'tab': 0}),
                       child: const Text.rich(
                         TextSpan(
                           text: 'Already have an account? ',

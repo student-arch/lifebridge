@@ -628,7 +628,7 @@ class HomeActiveScreen extends StatelessWidget {
                               const SizedBox(height: 6),
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.baseline,
-                                
+                                textBaseline: TextBaseline.alphabetic,
                                 children: const [
                                   LbNumber('Day 2', size: 20),
                                   SizedBox(width: 4),
@@ -853,7 +853,6 @@ class HomeAttentionScreen extends StatelessWidget {
                 iconColor: LbColors.accent,
                 iconBg: LbColors.surface,
               ),
-              const Spacer(),
               const SizedBox(height: 16),
               LbButton(label: 'Start with cost breakdown', onTap: () => Navigator.pushNamed(context, '/docs/upload')),
             ],

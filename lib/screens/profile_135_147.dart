@@ -907,7 +907,7 @@ class SignOutScreen extends StatelessWidget {
               const Spacer(),
               LbButton(label: 'Sign out', variant: LbButtonVariant.danger, onTap: () {
                 AppScope.read(context).signOut();
-                Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+                Navigator.pushNamedAndRemoveUntil(context, '/auth', (_) => false);
               }),
               const SizedBox(height: 8),
               LbButton(label: 'Cancel', variant: LbButtonVariant.secondary, onTap: () => Navigator.pop(context)),

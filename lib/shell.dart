@@ -45,7 +45,7 @@ class _MainShellState extends State<MainShell> {
   void _enforceAuth() {
     if (!mounted || _state == null) return;
     if (!_state!.signedIn) {
-      Navigator.pushNamedAndRemoveUntil(context, '/welcome', (_) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/auth', (_) => false);
     }
   }
 

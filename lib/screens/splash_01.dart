@@ -9,14 +9,21 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   double _progress = 0;
   Timer? _timer;
   bool _navigated = false;
+  late final AnimationController _anim;
+  late final Animation<double> _scale;
+  late final Animation<double> _fade;
 
   @override
   void initState() {
     super.initState();
+    _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _scale = CurvedAnimation(parent: _anim, curve: Curves.easeOutBack);
+    _fade = CurvedAnimation(parent: _anim, curve: Curves.easeIn);
+    _anim.forward();
     _start();
   }
 
@@ -24,7 +31,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (_navigated || !mounted) return;
     _navigated = true;
     _timer?.cancel();
-    Navigator.pushReplacementNamed(context, '/welcome');
+    Navigator.pushReplacementNamed(context, '/auth');
   }
 
   void _start() {
@@ -44,6 +51,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _anim.dispose();
     super.dispose();
   }
 
@@ -51,48 +59,105 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     final shortest = mq.size.shortestSide;
-    final logo = (shortest * 0.22).clamp(64.0, 96.0);
-    final iconSize = (shortest * 0.11).clamp(32.0, 48.0);
+    final logo = (shortest * 0.26).clamp(72.0, 104.0);
+    final iconSize = (shortest * 0.12).clamp(36.0, 52.0);
     return Scaffold(
       backgroundColor: LbColors.bg,
       body: SafeArea(
         child: GestureDetector(
           onTap: _go,
           behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: LayoutBuilder(
-              builder: (context, c) {
-                return Column(
+          child: Stack(
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [LbColors.surface, LbColors.bg],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -shortest * 0.18,
+                right: -shortest * 0.18,
+                child: Container(
+                  width: shortest * 0.6,
+                  height: shortest * 0.6,
+                  decoration: const BoxDecoration(shape: BoxShape.circle, color: LbColors.accentSoft),
+                ),
+              ),
+              Positioned(
+                bottom: -shortest * 0.22,
+                left: -shortest * 0.22,
+                child: Container(
+                  width: shortest * 0.65,
+                  height: shortest * 0.65,
+                  decoration: const BoxDecoration(shape: BoxShape.circle, color: LbColors.infoBg),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
                   children: [
-                    SizedBox(height: c.maxHeight * 0.18),
-                    Container(
-                      width: logo,
-                      height: logo,
-                      decoration: BoxDecoration(color: LbColors.accent, borderRadius: BorderRadius.circular(24)),
-                      alignment: Alignment.center,
-                      child: Icon(Icons.health_and_safety_outlined, color: LbColors.surface, size: iconSize),
+                    const Spacer(flex: 3),
+                    ScaleTransition(
+                      scale: _scale,
+                      child: FadeTransition(
+                        opacity: _fade,
+                        child: Container(
+                          width: logo,
+                          height: logo,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [LbColors.accent2, LbColors.accent],
+                            ),
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: [
+                              BoxShadow(
+                                color: LbColors.accent.withValues(alpha: 0.35),
+                                blurRadius: 28,
+                                offset: const Offset(0, 14),
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(Icons.health_and_safety_outlined, color: LbColors.surface, size: iconSize),
+                        ),
+                      ),
                     ),
-                    SizedBox(height: c.maxHeight * 0.05),
-                    const LbH1('LifeBridge'),
+                    const SizedBox(height: 24),
+                    FadeTransition(
+                      opacity: _fade,
+                      child: const LbH1('LifeBridge'),
+                    ),
                     const SizedBox(height: 8),
-                    LbBody('Compassionate assistance, made simple.', color: LbColors.muted, align: TextAlign.center),
-                    const Spacer(),
+                    FadeTransition(
+                      opacity: _fade,
+                      child: LbBody('Compassionate assistance, made simple.', color: LbColors.muted, align: TextAlign.center),
+                    ),
+                    const Spacer(flex: 4),
+                    LbMeta('Getting things ready…', color: LbColors.muted),
+                    const SizedBox(height: 12),
                     Container(
-                      width: 120,
-                      height: 3,
+                      width: 160,
+                      height: 5,
                       decoration: BoxDecoration(color: LbColors.borderSoft, borderRadius: BorderRadius.circular(999)),
                       child: FractionallySizedBox(
                         alignment: Alignment.centerLeft,
                         widthFactor: _progress.clamp(0, 1),
-                        child: Container(decoration: BoxDecoration(color: LbColors.fg, borderRadius: BorderRadius.circular(999))),
+                        child: Container(decoration: BoxDecoration(color: LbColors.accent, borderRadius: BorderRadius.circular(999))),
                       ),
                     ),
-                    SizedBox(height: c.maxHeight * 0.05),
+                    const SizedBox(height: 24),
+                    LbMeta('v1.0.0', color: LbColors.muted),
+                    const SizedBox(height: 16),
                   ],
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -146,12 +211,12 @@ class WelcomeScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  LbButton(label: 'Get started', onTap: () => Navigator.pushNamed(context, '/onboarding/1')),
+                  LbButton(label: 'Get started', onTap: () => Navigator.pushReplacementNamed(context, '/auth', arguments: const {'tab': 1})),
                   const SizedBox(height: 8),
                   LbButton(
                     label: 'I already have an account',
                     variant: LbButtonVariant.ghost,
-                    onTap: () => Navigator.pushNamed(context, '/login'),
+                    onTap: () => Navigator.pushReplacementNamed(context, '/auth', arguments: const {'tab': 0}),
                   ),
                 ],
               ),

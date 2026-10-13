@@ -30,6 +30,13 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Disable Impeller: it renders blank on this device's GPU
+             (Mali-G76 / MIUI). This key is read by FlutterLoader from the
+             <application> meta-data, so it must live here (not in <activity>).
+             Falls back to the stable Skia backend. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

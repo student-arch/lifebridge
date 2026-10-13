@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'shell.dart';
 import 'screens/splash_01.dart';
 import 'screens/get_started_06_07.dart';
+import 'screens/auth_08.dart';
 import 'screens/login_08.dart';
 import 'screens/register_15_21.dart';
 import 'screens/home_22_25.dart';
@@ -40,6 +41,7 @@ class AppRouter {
     '/onboarding/3': (_) => const Onboarding3Screen(),
     '/get-started': (_) => const GetStartedScreen(),
     '/user-type': (_) => const UserTypeScreen(),
+    '/auth': (_) => const AuthScreen(),
     '/login': (_) => const LoginScreen(),
     '/login-phone': (_) => const LoginPhoneScreen(),
     '/login-otp': (_) => const LoginOtpScreen(),
