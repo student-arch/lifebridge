@@ -2,11 +2,7 @@
 
 > **Compassionate assistance, made simple.** A Flutter patient-assistance case-management app that helps patients and caregivers discover financial, medical, and community support programs — with a real AI backend wired into every assistant surface.
 
-![Flutter](https://img.shields.io/badge/Flutter-3.47 Stable-02569B?logo=flutter)
-![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart)
-![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)
-![Tests](https://img.shields.io/badge/Tests-39 Passing-brightgreen)
-![Analyzer](https://img.shields.io/badge/flutter_analyze-Clean-brightgreen)
+![Flutter](https://img.shields.io/badge/Flutter-3.47_Stable-02569B?logo=flutter) ![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart) ![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android) ![Tests](https://img.shields.io/badge/Tests-39_Passing-brightgreen) ![Analyzer](https://img.shields.io/badge/flutter_analyze-Clean-brightgreen)
 
 ---
 
